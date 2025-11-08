@@ -27,7 +27,7 @@
     <!-- Konten dinamis (login atau dashboard) diisi dari JS -->
     <section id="auth" class="auth-container">
       <div class="auth-image">
-        <img src="images/gambar_login.jpg" alt="Ilustrasi Login" />
+        <img src="https://cdn.pixabay.com/photo/2021/08/04/13/06/software-developer-6521720_1280.jpg" alt="Ilustrasi Login" />
       </div>
       <div class="auth-card">
         <h2>Masuk / Daftar Akun</h2>
@@ -63,6 +63,10 @@
             <i class="fas fa-lock"></i>
             <input id="regPass" class="input" type="password" placeholder="Password" />
           </div>
+          <div class="input-group">
+            <i class="fas fa-envelope"></i>
+            <input id="regEmail" class="input" placeholder="Email" />
+          </div>
           <button class="btn" id="btnReg">Register</button>
           <button class="btn-secondary" id="btnFillExample">Isi Contoh</button>
           <p id="regMsg" class="msg"></p>
@@ -77,6 +81,31 @@
 
   <!-- Toast Notification -->
   <div id="toast" class="toast"></div>
+
+  <!-- Modal Edit Profile -->
+  <div id="profileModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Edit Profil</h3>
+        <button class="modal-close" onclick="closeProfileModal()">&times;</button>
+      </div>
+      <div class="input-group">
+        <i class="fas fa-user"></i>
+        <input id="editName" class="input" placeholder="Nama Lengkap" />
+      </div>
+      <div class="input-group">
+        <i class="fas fa-envelope"></i>
+        <input id="editEmail" class="input" placeholder="Email" />
+      </div>
+      <div class="input-group">
+        <i class="fas fa-phone"></i>
+        <input id="editPhone" class="input" placeholder="Nomor Telepon" />
+      </div>
+      <button class="btn" onclick="saveProfile()">
+        <i class="fas fa-save"></i> Simpan Perubahan
+      </button>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>
