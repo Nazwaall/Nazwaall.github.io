@@ -52,6 +52,7 @@ const FlowSyncAPI = {
             tasks: [],
             projects: [],
             activities: [],
+            productivityStats: this.initializeProductivityStats(),
             created_at: new Date().toISOString()
         };
 
@@ -63,6 +64,71 @@ const FlowSyncAPI = {
             user: { ...newUser },
             message: "Registrasi berhasil!"
         };
+    },
+
+    // Initialize productivity stats
+    initializeProductivityStats() {
+        return {
+            weekly: {
+                tasksCompleted: 0,
+                tasksCreated: 0,
+                productivityScore: 0
+            },
+            monthly: {
+                tasksCompleted: 0,
+                tasksCreated: 0,
+                productivityScore: 0
+            },
+            lastUpdated: new Date().toISOString()
+        };
+    },
+
+    // Update productivity stats
+    updateProductivityStats(userId, taskAction) {
+        const userIndex = users.findIndex(u => u.id === userId);
+        if (userIndex === -1) return;
+
+        const user = users[userIndex];
+        const now = new Date();
+        const currentWeek = this.getWeekNumber(now);
+        const currentMonth = now.getMonth();
+        
+        if (!user.productivityStats) {
+            user.productivityStats = this.initializeProductivityStats();
+        }
+
+        // Update weekly stats
+        if (taskAction === 'completed') {
+            user.productivityStats.weekly.tasksCompleted++;
+        } else if (taskAction === 'created') {
+            user.productivityStats.weekly.tasksCreated++;
+        }
+
+        // Update monthly stats
+        if (taskAction === 'completed') {
+            user.productivityStats.monthly.tasksCompleted++;
+        } else if (taskAction === 'created') {
+            user.productivityStats.monthly.tasksCreated++;
+        }
+
+        // Calculate productivity scores (simple formula)
+        user.productivityStats.weekly.productivityScore = 
+            Math.round((user.productivityStats.weekly.tasksCompleted / 
+                       Math.max(user.productivityStats.weekly.tasksCreated, 1)) * 100);
+        
+        user.productivityStats.monthly.productivityScore = 
+            Math.round((user.productivityStats.monthly.tasksCompleted / 
+                       Math.max(user.productivityStats.monthly.tasksCreated, 1)) * 100);
+
+        user.productivityStats.lastUpdated = now.toISOString();
+
+        localStorage.setItem("flowsync_users", JSON.stringify(users));
+    },
+
+    getWeekNumber(date) {
+        const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+        const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+        return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
     },
 
     // Task Management
@@ -89,7 +155,8 @@ const FlowSyncAPI = {
             description: taskData.description || "",
             deadline: taskData.deadline || "",
             status: taskData.status || "todo",
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            completed_at: null
         };
 
         if (!users[userIndex].tasks) {
@@ -97,6 +164,10 @@ const FlowSyncAPI = {
         }
 
         users[userIndex].tasks.push(newTask);
+        
+        // Update productivity stats
+        this.updateProductivityStats(userId, 'created');
+        
         localStorage.setItem("flowsync_users", JSON.stringify(users));
 
         return {
@@ -112,7 +183,15 @@ const FlowSyncAPI = {
         for (let user of users) {
             const taskIndex = user.tasks?.findIndex(t => t.id === taskId);
             if (taskIndex !== -1 && taskIndex !== undefined) {
+                const oldStatus = user.tasks[taskIndex].status;
                 user.tasks[taskIndex] = { ...user.tasks[taskIndex], ...updateData };
+                
+                // Update productivity stats if task was completed
+                if (updateData.status === 'done' && oldStatus !== 'done') {
+                    user.tasks[taskIndex].completed_at = new Date().toISOString();
+                    this.updateProductivityStats(user.id, 'completed');
+                }
+                
                 localStorage.setItem("flowsync_users", JSON.stringify(users));
                 return {
                     success: true,
@@ -241,6 +320,66 @@ const FlowSyncAPI = {
             success: true,
             user: users[userIndex],
             message: "Profil berhasil diperbarui!"
+        };
+    },
+
+    // Productivity Reports
+    async getProductivityReport(userId, period = 'week') {
+        await this.delay(300);
+        const user = users.find(u => u.id === userId);
+        if (!user) {
+            return { success: false, message: "User tidak ditemukan!" };
+        }
+
+        const now = new Date();
+        let startDate, endDate;
+
+        if (period === 'week') {
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - 7);
+            endDate = now;
+        } else if (period === 'month') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        } else if (period === 'lastMonth') {
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        }
+
+        // Filter tasks for the period
+        const periodTasks = user.tasks?.filter(task => {
+            const taskDate = new Date(task.created_at);
+            return taskDate >= startDate && taskDate <= endDate;
+        }) || [];
+
+        const completedTasks = periodTasks.filter(task => task.status === 'done');
+        const inProgressTasks = periodTasks.filter(task => task.status === 'inprogress');
+        const todoTasks = periodTasks.filter(task => task.status === 'todo');
+
+        // Calculate completion rate
+        const completionRate = periodTasks.length > 0 
+            ? Math.round((completedTasks.length / periodTasks.length) * 100) 
+            : 0;
+
+        // Get recently completed tasks
+        const recentlyCompleted = completedTasks
+            .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
+            .slice(0, 5);
+
+        return {
+            success: true,
+            report: {
+                period,
+                startDate: startDate.toISOString(),
+                endDate: endDate.toISOString(),
+                totalTasks: periodTasks.length,
+                completedTasks: completedTasks.length,
+                inProgressTasks: inProgressTasks.length,
+                todoTasks: todoTasks.length,
+                completionRate,
+                recentlyCompleted,
+                productivityStats: user.productivityStats || this.initializeProductivityStats()
+            }
         };
     }
 };
@@ -733,6 +872,113 @@ async function saveProfile() {
     }
 }
 
+// ============ Productivity Report Functions ============
+function openReportModal() {
+    document.getElementById('reportModal').classList.add('show');
+    loadProductivityReport('week');
+}
+
+function closeReportModal() {
+    document.getElementById('reportModal').classList.remove('show');
+}
+
+async function loadProductivityReport(period) {
+    try {
+        const result = await FlowSyncAPI.getProductivityReport(currentUser.id, period);
+        
+        if (result.success) {
+            renderProductivityReport(result.report);
+            
+            // Update active period button
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`.period-btn[data-period="${period}"]`).classList.add('active');
+        } else {
+            showToast(result.message || "Gagal memuat laporan!", "error");
+        }
+    } catch (error) {
+        showToast("Terjadi kesalahan saat memuat laporan!", "error");
+    }
+}
+
+function renderProductivityReport(report) {
+    const reportContent = document.getElementById('reportContent');
+    const periodText = getPeriodText(report.period);
+    
+    reportContent.innerHTML = `
+        <div class="report-summary">
+            <div class="report-stat">
+                <h4>${report.totalTasks}</h4>
+                <p>Total Tugas</p>
+            </div>
+            <div class="report-stat">
+                <h4>${report.completedTasks}</h4>
+                <p>Selesai</p>
+            </div>
+            <div class="report-stat">
+                <h4>${report.completionRate}%</h4>
+                <p>Tingkat Penyelesaian</p>
+            </div>
+            <div class="report-stat">
+                <h4>${report.productivityStats[report.period === 'week' ? 'weekly' : 'monthly'].productivityScore}%</h4>
+                <p>Skor Produktivitas</p>
+            </div>
+        </div>
+
+        <div class="productivity-chart">
+            <h4>Distribusi Tugas</h4>
+            <div class="chart-bar">
+                <div class="chart-label">Belum Dikerjakan</div>
+                <div class="chart-bar-inner">
+                    <div class="chart-bar-fill todo" style="width: ${report.totalTasks > 0 ? (report.todoTasks / report.totalTasks) * 100 : 0}%"></div>
+                </div>
+                <div class="chart-value">${report.todoTasks}</div>
+            </div>
+            <div class="chart-bar">
+                <div class="chart-label">Sedang Dikerjakan</div>
+                <div class="chart-bar-inner">
+                    <div class="chart-bar-fill inprogress" style="width: ${report.totalTasks > 0 ? (report.inProgressTasks / report.totalTasks) * 100 : 0}%"></div>
+                </div>
+                <div class="chart-value">${report.inProgressTasks}</div>
+            </div>
+            <div class="chart-bar">
+                <div class="chart-label">Selesai</div>
+                <div class="chart-bar-inner">
+                    <div class="chart-bar-fill done" style="width: ${report.totalTasks > 0 ? (report.completedTasks / report.totalTasks) * 100 : 0}%"></div>
+                </div>
+                <div class="chart-value">${report.completedTasks}</div>
+            </div>
+        </div>
+
+        ${report.recentlyCompleted.length > 0 ? `
+            <div class="report-tasks">
+                <h4>Tugas yang Baru Selesai</h4>
+                ${report.recentlyCompleted.map(task => `
+                    <div class="report-task-item">
+                        <div class="report-task-info">
+                            <div class="report-task-title">${task.title}</div>
+                            <div class="report-task-meta">
+                                <span>Diselesaikan: ${formatDate(task.completed_at)}</span>
+                                ${task.deadline ? `<span>Deadline: ${formatDate(task.deadline)}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        ` : ''}
+    `;
+}
+
+function getPeriodText(period) {
+    const periods = {
+        'week': 'Minggu Ini',
+        'month': 'Bulan Ini',
+        'lastMonth': 'Bulan Lalu'
+    };
+    return periods[period] || period;
+}
+
 // ============ UI Rendering Functions ============
 function renderUserProfile() {
     const userProfile = document.getElementById("userProfile");
@@ -752,6 +998,9 @@ function renderUserProfile() {
                 <div class="user-menu" id="userMenu">
                     <button onclick="openProfileModal()">
                         <i class="fas fa-user-edit"></i> Edit Profil
+                    </button>
+                    <button onclick="openReportModal()">
+                        <i class="fas fa-chart-line"></i> Laporan Produktivitas
                     </button>
                     <button onclick="logout()">
                         <i class="fas fa-sign-out-alt"></i> Logout
@@ -858,7 +1107,7 @@ function renderDashboard(container) {
             <p style="text-align: center;">${doneCount} dari ${totalTasks} tugas selesai</p>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+        <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
             <div class="card">
                 <h3><i class="fas fa-list-ul"></i> Tugas Terbaru</h3>
                 ${currentUser.tasks && currentUser.tasks.length > 0 ? 
@@ -1163,6 +1412,7 @@ function renderApp() {
                     <button class="btn-secondary" onclick="showView('tasks')"><i class="fas fa-tasks"></i> Tugas</button>
                     <button class="btn-secondary" onclick="showView('projects')"><i class="fas fa-project-diagram"></i> Proyek</button>
                     <button class="btn-secondary" onclick="showView('kanban')"><i class="fas fa-columns"></i> Kanban</button>
+                    <button class="btn-secondary" onclick="openReportModal()"><i class="fas fa-chart-line"></i> Laporan</button>
                 </div>
                 <div class="notify">
                     <h4><i class="fas fa-bell"></i> Aktivitas Terbaru</h4>
@@ -1221,6 +1471,7 @@ function initDemoData() {
                     timestamp: new Date().toISOString()
                 }
             ],
+            productivityStats: FlowSyncAPI.initializeProductivityStats(),
             created_at: new Date().toISOString()
         };
 
@@ -1250,6 +1501,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("regPass").addEventListener("keypress", (e) => {
         if (e.key === "Enter") handleRegister();
+    });
+
+    // Event listeners for productivity report period buttons
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('period-btn')) {
+            const period = e.target.dataset.period;
+            loadProductivityReport(period);
+        }
     });
 
     initDemoData();
