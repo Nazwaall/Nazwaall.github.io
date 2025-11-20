@@ -493,6 +493,79 @@ const ActivityManager = {
     }
 };
 
+// ============ Deadline Notification System ============
+const DeadlineManager = {
+    checkDeadlines() {
+        if (!currentUser || !currentUser.tasks) return [];
+        
+        const now = new Date();
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        const upcomingDeadlines = currentUser.tasks.filter(task => {
+            if (!task.deadline || task.status === 'done') return false;
+            
+            const taskDeadline = new Date(task.deadline);
+            const timeDiff = taskDeadline - now;
+            const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+            
+            return daysDiff <= 1 && daysDiff >= 0;
+        });
+        
+        return upcomingDeadlines;
+    },
+    
+    showDeadlineNotifications() {
+        const upcomingDeadlines = this.checkDeadlines();
+        
+        if (upcomingDeadlines.length > 0) {
+            upcomingDeadlines.forEach(task => {
+                const taskDeadline = new Date(task.deadline);
+                const now = new Date();
+                const hoursDiff = Math.ceil((taskDeadline - now) / (1000 * 60 * 60));
+                
+                let message = '';
+                if (hoursDiff <= 24 && hoursDiff > 0) {
+                    message = `⏰ Deadline "${task.title}" dalam ${hoursDiff} jam! Ayo kerjakan!`;
+                } else if (hoursDiff <= 0) {
+                    message = `🚨 Deadline "${task.title}" sudah lewat!`;
+                }
+                
+                if (message) {
+                    setTimeout(() => {
+                        showToast(message, 'warning');
+                    }, 1000);
+                }
+            });
+        }
+    },
+    
+    renderDeadlineWarning() {
+        const upcomingDeadlines = this.checkDeadlines();
+        
+        if (upcomingDeadlines.length === 0) return '';
+        
+        return `
+            <div class="deadline-warning" style="
+                background: linear-gradient(90deg, var(--warning), #fbbf24);
+                color: white;
+                padding: 1rem;
+                border-radius: 12px;
+                margin-bottom: 1rem;
+                animation: pulse 2s infinite;
+            ">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 1.2rem;"></i>
+                    <strong style="font-size: 1rem;">Deadline Mendekat!</strong>
+                </div>
+                <div style="font-size: 0.9rem;">
+                    ${upcomingDeadlines.length} tugas mendekati deadline. Ayo kerjakan!
+                </div>
+            </div>
+        `;
+    }
+};
+
 // ============ Authentication Functions ============
 async function handleLogin() {
     const u = document.getElementById("loginUser").value.trim();
@@ -1021,10 +1094,32 @@ function toggleUserMenu() {
 }
 
 function toggleSidebar() {
-    sidebarCollapsed = !sidebarCollapsed;
-    const appGrid = document.querySelector('.app-grid');
-    if (appGrid) {
-        appGrid.classList.toggle('sidebar-collapsed', sidebarCollapsed);
+    if (window.innerWidth <= 768) {
+        // Mode mobile - toggle sidebar dengan overlay
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.querySelector('.sidebar-overlay');
+        
+        sidebar.classList.toggle('mobile-open');
+        if (overlay) {
+            overlay.classList.toggle('active');
+        }
+    } else {
+        // Mode desktop - behavior lama
+        sidebarCollapsed = !sidebarCollapsed;
+        const appGrid = document.querySelector('.app-grid');
+        if (appGrid) {
+            appGrid.classList.toggle('sidebar-collapsed', sidebarCollapsed);
+        }
+    }
+}
+
+function closeMobileSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    
+    sidebar.classList.remove('mobile-open');
+    if (overlay) {
+        overlay.classList.remove('active');
     }
 }
 
@@ -1074,6 +1169,8 @@ function renderDashboard(container) {
         <div class="card">
             <h2><i class="fas fa-tachometer-alt"></i> Dashboard</h2>
             <p class="mb-3">Selamat datang kembali, ${currentUser.name}! 👋</p>
+            
+            ${DeadlineManager.renderDeadlineWarning()}
         </div>
 
         <div class="stats-container">
@@ -1398,6 +1495,9 @@ function renderApp() {
     `;
 
     document.getElementById("app").innerHTML = `
+        <!-- Overlay untuk mobile -->
+        <div class="sidebar-overlay" onclick="closeMobileSidebar()"></div>
+        
         <div class="app-grid ${sidebarCollapsed ? 'sidebar-collapsed' : ''}">
             <aside class="sidebar">
                 <div class="profile">
@@ -1408,11 +1508,21 @@ function renderApp() {
                     </div>
                 </div>
                 <div class="quick">
-                    <button class="btn-secondary" onclick="showView('dashboard')"><i class="fas fa-tachometer-alt"></i> Dashboard</button>
-                    <button class="btn-secondary" onclick="showView('tasks')"><i class="fas fa-tasks"></i> Tugas</button>
-                    <button class="btn-secondary" onclick="showView('projects')"><i class="fas fa-project-diagram"></i> Proyek</button>
-                    <button class="btn-secondary" onclick="showView('kanban')"><i class="fas fa-columns"></i> Kanban</button>
-                    <button class="btn-secondary" onclick="openReportModal()"><i class="fas fa-chart-line"></i> Laporan</button>
+                    <button class="btn-secondary" onclick="showView('dashboard'); closeMobileSidebar();">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </button>
+                    <button class="btn-secondary" onclick="showView('tasks'); closeMobileSidebar();">
+                        <i class="fas fa-tasks"></i> Tugas
+                    </button>
+                    <button class="btn-secondary" onclick="showView('projects'); closeMobileSidebar();">
+                        <i class="fas fa-project-diagram"></i> Proyek
+                    </button>
+                    <button class="btn-secondary" onclick="showView('kanban'); closeMobileSidebar();">
+                        <i class="fas fa-columns"></i> Kanban
+                    </button>
+                    <button class="btn-secondary" onclick="openReportModal(); closeMobileSidebar();">
+                        <i class="fas fa-chart-line"></i> Laporan
+                    </button>
                 </div>
                 <div class="notify">
                     <h4><i class="fas fa-bell"></i> Aktivitas Terbaru</h4>
@@ -1427,6 +1537,16 @@ function renderApp() {
     if (sidebarToggle) {
         sidebarToggle.onclick = toggleSidebar;
     }
+
+    // Tampilkan notifikasi deadline
+    setTimeout(() => {
+        DeadlineManager.showDeadlineNotifications();
+    }, 2000);
+
+    // Periksa deadline setiap 5 menit
+    setInterval(() => {
+        DeadlineManager.showDeadlineNotifications();
+    }, 5 * 60 * 1000);
 
     renderUserProfile();
     ActivityManager.renderActivities();
@@ -1503,11 +1623,28 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.key === "Enter") handleRegister();
     });
 
-    // Event listeners for productivity report period buttons
+    // Event listeners untuk productivity report period buttons
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('period-btn')) {
             const period = e.target.dataset.period;
             loadProductivityReport(period);
+        }
+    });
+
+    // Tutup sidebar mobile ketika window di-resize ke desktop
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            closeMobileSidebar();
+        }
+    });
+
+    // Close user menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.user-dropdown')) {
+            const menu = document.getElementById('userMenu');
+            if (menu) {
+                menu.classList.remove('show');
+            }
         }
     });
 
@@ -1516,15 +1653,5 @@ document.addEventListener("DOMContentLoaded", () => {
     if (currentUser) {
         renderApp();
         ActivityManager.addActivity('login', `Session dilanjutkan`);
-    }
-});
-
-// Close user menu when clicking outside
-document.addEventListener('click', (e) => {
-    if (!e.target.closest('.user-dropdown')) {
-        const menu = document.getElementById('userMenu');
-        if (menu) {
-            menu.classList.remove('show');
-        }
     }
 });
