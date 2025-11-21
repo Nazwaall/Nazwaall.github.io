@@ -401,9 +401,44 @@ function toggleTheme() {
 function updateThemeToggleIcon() {
     const themeToggle = document.querySelector('.theme-toggle');
     if (themeToggle) {
-        themeToggle.innerHTML = currentTheme === "light" 
-            ? '<i class="fas fa-moon"></i><span>Tema Gelap</span>'
-            : '<i class="fas fa-sun"></i><span>Tema Terang</span>';
+        const icon = currentTheme === "light" ? '🌙' : '☀️';
+        themeToggle.innerHTML = `${icon}`;
+    }
+}
+
+// ============ Password Toggle Functionality ============
+function togglePasswordVisibility(event) {
+    const toggleBtn = event.currentTarget;
+    const passwordInput = toggleBtn.previousElementSibling; // Input element
+    const icon = toggleBtn.querySelector('i');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+        toggleBtn.setAttribute('aria-label', 'Sembunyikan password');
+    } else {
+        passwordInput.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+        toggleBtn.setAttribute('aria-label', 'Tampilkan password');
+    }
+    
+    // Focus kembali ke input setelah toggle
+    passwordInput.focus();
+}
+
+function initPasswordToggles() {
+    // Initialize login password toggle
+    const loginToggle = document.getElementById('toggleLoginPassword');
+    if (loginToggle) {
+        loginToggle.addEventListener('click', togglePasswordVisibility);
+    }
+    
+    // Initialize register password toggle
+    const regToggle = document.getElementById('toggleRegPassword');
+    if (regToggle) {
+        regToggle.addEventListener('click', togglePasswordVisibility);
     }
 }
 
@@ -1132,6 +1167,9 @@ function switchTab(tab) {
     
     document.getElementById("loginMsg").textContent = "";
     document.getElementById("regMsg").textContent = "";
+    
+    // Initialize password toggles when switching tabs
+    setTimeout(initPasswordToggles, 50);
 }
 
 function showView(view) {
@@ -1204,13 +1242,13 @@ function renderDashboard(container) {
             <p style="text-align: center;">${doneCount} dari ${totalTasks} tugas selesai</p>
         </div>
 
-        <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+        <div class="dashboard-grid">
             <div class="card">
                 <h3><i class="fas fa-list-ul"></i> Tugas Terbaru</h3>
                 ${currentUser.tasks && currentUser.tasks.length > 0 ? 
                     currentUser.tasks.slice(0, 5).map(task => `
                         <div style="padding: 0.8rem 0; border-bottom: 1px solid var(--border);">
-                            <strong>${task.title}</strong>
+                            <strong style="color: var(--dark);">${task.title}</strong>
                             <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--gray); margin-top: 0.3rem;">
                                 <span class="status-badge ${task.status}">${getStatusText(task.status)}</span>
                                 ${task.deadline ? `<span>${formatDate(task.deadline)}</span>` : ''}
@@ -1226,7 +1264,7 @@ function renderDashboard(container) {
                 ${currentUser.projects && currentUser.projects.length > 0 ? 
                     currentUser.projects.slice(0, 5).map(project => `
                         <div style="padding: 0.8rem 0; border-bottom: 1px solid var(--border);">
-                            <strong>${project.title}</strong>
+                            <strong style="color: var(--dark);">${project.title}</strong>
                             <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.3rem;">
                                 ${project.deadline ? `Deadline: ${formatDate(project.deadline)}` : 'Tidak ada deadline'}
                             </div>
@@ -1251,31 +1289,41 @@ function renderTasks(container) {
             
             <div class="task-status-tabs">
                 <button class="task-status-tab ${currentTaskFilter === 'all' ? 'active' : ''}" onclick="setTaskFilter('all')">
-                    Semua Tugas
+                    <i class="fas fa-list"></i> Semua
                 </button>
                 <button class="task-status-tab todo ${currentTaskFilter === 'todo' ? 'active' : ''}" onclick="setTaskFilter('todo')">
-                    Belum Dikerjakan
+                    <i class="fas fa-clock"></i> Belum
                 </button>
                 <button class="task-status-tab inprogress ${currentTaskFilter === 'inprogress' ? 'active' : ''}" onclick="setTaskFilter('inprogress')">
-                    Sedang Dikerjakan
+                    <i class="fas fa-spinner"></i> Sedang
                 </button>
                 <button class="task-status-tab done ${currentTaskFilter === 'done' ? 'active' : ''}" onclick="setTaskFilter('done')">
-                    Selesai
+                    <i class="fas fa-check"></i> Selesai
                 </button>
             </div>
 
             <div style="background: var(--card-bg); padding: var(--spacing-lg); border-radius: 12px; margin-bottom: var(--spacing-md);">
                 <h3><i class="fas fa-plus"></i> Tambah Tugas Baru</h3>
-                <div style="display: grid; gap: var(--spacing-md); grid-template-columns: 1fr 1fr; margin-bottom: var(--spacing-md);">
+                <div class="input-group">
+                    <i class="fas fa-pencil-alt"></i>
                     <input type="text" id="taskTitle" class="input" placeholder="Judul Tugas">
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-calendar"></i>
                     <input type="date" id="taskDeadline" class="input">
                 </div>
-                <textarea id="taskDesc" class="input" placeholder="Deskripsi Tugas" style="width: 100%; margin-bottom: var(--spacing-md); min-height: 80px;"></textarea>
-                <select id="taskStatus" class="input" style="margin-bottom: var(--spacing-md);">
-                    <option value="todo">Belum Dikerjakan</option>
-                    <option value="inprogress">Sedang Dikerjakan</option>
-                    <option value="done">Selesai</option>
-                </select>
+                <div class="input-group">
+                    <i class="fas fa-align-left"></i>
+                    <textarea id="taskDesc" class="input" placeholder="Deskripsi Tugas" style="min-height: 80px; resize: vertical;"></textarea>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-tag"></i>
+                    <select id="taskStatus" class="input">
+                        <option value="todo">Belum Dikerjakan</option>
+                        <option value="inprogress">Sedang Dikerjakan</option>
+                        <option value="done">Selesai</option>
+                    </select>
+                </div>
                 <button class="btn" onclick="addTask()">
                     <i class="fas fa-plus"></i> Tambah Tugas
                 </button>
@@ -1285,22 +1333,22 @@ function renderTasks(container) {
             ${filteredTasks.length > 0 ? 
                 filteredTasks.map((task, index) => `
                     <div class="task-card">
-                        <div style="display: flex; justify-content: space-between; align-items: start;">
-                            <div style="flex: 1;">
-                                <h4 style="margin: 0 0 0.5rem 0;">${task.title}</h4>
-                                ${task.description ? `<p style="margin: 0 0 0.8rem 0; color: var(--gray);">${task.description}</p>` : ''}
-                                <div style="display: flex; gap: var(--spacing-md); font-size: 0.8rem; color: var(--gray); margin-bottom: 0.8rem;">
-                                    ${task.deadline ? `<span><i class="fas fa-calendar"></i> ${formatDate(task.deadline)}</span>` : ''}
+                        <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 1rem;">
+                            <div style="flex: 1; min-width: 250px;">
+                                <h4 style="margin: 0 0 0.5rem 0; color: var(--dark);">${task.title}</h4>
+                                ${task.description ? `<p style="margin: 0 0 0.8rem 0; color: var(--gray); line-height: 1.4;">${task.description}</p>` : ''}
+                                <div style="display: flex; gap: var(--spacing-md); font-size: 0.8rem; color: var(--gray); margin-bottom: 0.8rem; flex-wrap: wrap;">
+                                    ${task.deadline ? `<span style="display: flex; align-items: center; gap: 0.3rem;"><i class="fas fa-calendar"></i> ${formatDate(task.deadline)}</span>` : ''}
                                     <span class="status-badge ${task.status}">${getStatusText(task.status)}</span>
                                 </div>
                                 
                                 <!-- Tombol Aksi Status -->
                                 <div class="task-status-buttons">
                                     <button class="status-btn todo-btn ${task.status === 'todo' ? 'active' : ''}" onclick="changeTaskStatus(${index}, 'todo')" title="Tandai sebagai Belum Dikerjakan">
-                                        <i class="fas fa-clock"></i> Belum Dikerjakan
+                                        <i class="fas fa-clock"></i> Belum
                                     </button>
                                     <button class="status-btn inprogress-btn ${task.status === 'inprogress' ? 'active' : ''}" onclick="changeTaskStatus(${index}, 'inprogress')" title="Tandai sebagai Sedang Dikerjakan">
-                                        <i class="fas fa-spinner"></i> Sedang Dikerjakan
+                                        <i class="fas fa-spinner"></i> Sedang
                                     </button>
                                     <button class="status-btn done-btn ${task.status === 'done' ? 'active' : ''}" onclick="changeTaskStatus(${index}, 'done')" title="Tandai sebagai Selesai">
                                         <i class="fas fa-check"></i> Selesai
@@ -1320,7 +1368,7 @@ function renderTasks(container) {
                         </div>
                     </div>
                 `).join('') : 
-                '<div class="card" style="text-align: center; color: var(--gray); padding: var(--spacing-lg);"><p>Tidak ada tugas</p></div>'
+                '<div class="card" style="text-align: center; color: var(--gray); padding: var(--spacing-lg);"><p>Tidak ada tugas yang ditemukan</p></div>'
             }
         </div>
     `;
@@ -1335,9 +1383,18 @@ function renderProjects(container) {
             
             <div style="background: var(--card-bg); padding: var(--spacing-lg); border-radius: 12px; margin-bottom: var(--spacing-md);">
                 <h3><i class="fas fa-plus"></i> Tambah Proyek Baru</h3>
-                <input type="text" id="projectTitle" class="input mb-2" placeholder="Judul Proyek">
-                <input type="date" id="projectDeadline" class="input mb-2">
-                <textarea id="projectDesc" class="input mb-2" placeholder="Deskripsi Proyek" style="width: 100%; min-height: 80px;"></textarea>
+                <div class="input-group">
+                    <i class="fas fa-pencil-alt"></i>
+                    <input type="text" id="projectTitle" class="input" placeholder="Judul Proyek">
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-calendar"></i>
+                    <input type="date" id="projectDeadline" class="input">
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-align-left"></i>
+                    <textarea id="projectDesc" class="input" placeholder="Deskripsi Proyek" style="min-height: 80px; resize: vertical;"></textarea>
+                </div>
                 <button class="btn" onclick="addProject()">
                     <i class="fas fa-plus"></i> Tambah Proyek
                 </button>
@@ -1347,11 +1404,11 @@ function renderProjects(container) {
             ${projects.length > 0 ? 
                 projects.map((project, index) => `
                     <div class="card">
-                        <div style="display: flex; justify-content: space-between; align-items: start;">
-                            <div style="flex: 1;">
-                                <h4 style="margin: 0 0 0.5rem 0;">${project.title}</h4>
-                                ${project.description ? `<p style="margin: 0 0 0.8rem 0; color: var(--gray);">${project.description}</p>` : ''}
-                                ${project.deadline ? `<p style="margin: 0; font-size: 0.8rem; color: var(--gray);"><i class="fas fa-calendar"></i> Deadline: ${formatDate(project.deadline)}</p>` : ''}
+                        <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 1rem;">
+                            <div style="flex: 1; min-width: 250px;">
+                                <h4 style="margin: 0 0 0.5rem 0; color: var(--dark);">${project.title}</h4>
+                                ${project.description ? `<p style="margin: 0 0 0.8rem 0; color: var(--gray); line-height: 1.4;">${project.description}</p>` : ''}
+                                ${project.deadline ? `<p style="margin: 0; font-size: 0.8rem; color: var(--gray); display: flex; align-items: center; gap: 0.3rem;"><i class="fas fa-calendar"></i> Deadline: ${formatDate(project.deadline)}</p>` : ''}
                             </div>
                             <div class="task-action-buttons">
                                 <button class="delete-btn" onclick="deleteProject(${index})" title="Hapus proyek">
@@ -1484,13 +1541,10 @@ function renderApp() {
     document.body.scrollTop = 0;
     document.documentElement.scrollTop = 0;
 
-    // Hanya menampilkan tombol theme toggle di navbar
+    // Update theme toggle dengan emoji yang sesuai
     document.querySelector(".app-header nav").innerHTML = `
         <button class="theme-toggle" onclick="toggleTheme()">
-            ${currentTheme === "light" 
-                ? '<i class="fas fa-moon"></i><span>Tema Gelap</span>'
-                : '<i class="fas fa-sun"></i><span>Tema Terang</span>'
-            }
+            ${currentTheme === "light" ? '🌙' : '☀️'}
         </button>
     `;
 
@@ -1615,12 +1669,19 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btnReg").onclick = handleRegister;
     document.getElementById("btnFillExample").onclick = fillExample;
 
-    document.getElementById("loginPass").addEventListener("keypress", (e) => {
-        if (e.key === "Enter") handleLogin();
-    });
+    // Initialize password toggles
+    initPasswordToggles();
 
-    document.getElementById("regPass").addEventListener("keypress", (e) => {
-        if (e.key === "Enter") handleRegister();
+    // Event listeners untuk Enter key
+    document.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            const activeTab = document.querySelector('.tab.active').id;
+            if (activeTab === 'tab-login') {
+                handleLogin();
+            } else {
+                handleRegister();
+            }
+        }
     });
 
     // Event listeners untuk productivity report period buttons
