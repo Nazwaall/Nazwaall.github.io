@@ -743,50 +743,74 @@ async function addTask() {
     }
 }
 
-async function changeTaskStatus(index, newStatus) {
-    const task = currentUser.tasks[index];
+async function changeTaskStatus(taskId, newStatus) {
+    // Cari task berdasarkan ID
+    const taskIndex = currentUser.tasks.findIndex(t => t.id === taskId);
+    if (taskIndex === -1) return;
+
+    const task = currentUser.tasks[taskIndex];
     const oldStatus = task.status;
-    task.status = newStatus;
-
-    if (newStatus === 'done' && oldStatus !== 'done') {
-        ActivityManager.addActivity('task_completed', `Menyelesaikan tugas: ${task.title}`);
-    }
-
+    
     try {
-        await FlowSyncAPI.updateTask(task.id, {
+        const result = await FlowSyncAPI.updateTask(task.id, {
             status: newStatus
         });
+
+        if (result.success) {
+            // Update local data
+            currentUser.tasks[taskIndex].status = newStatus;
+            
+            if (newStatus === 'done' && oldStatus !== 'done') {
+                currentUser.tasks[taskIndex].completed_at = new Date().toISOString();
+                ActivityManager.addActivity('task_completed', `Menyelesaikan tugas: ${task.title}`);
+            }
+
+            localStorage.setItem("currentUser", JSON.stringify(currentUser));
+            showToast(`Status tugas diubah menjadi ${getStatusText(newStatus)}`, "success");
+            
+            // Refresh tampilan
+            renderTasks(document.getElementById("view"));
+        } else {
+            showToast(result.message || "Gagal mengubah status tugas!", "error");
+        }
     } catch (error) {
+        showToast("Terjadi kesalahan saat mengubah status!", "error");
         console.error('Error updating task status:', error);
     }
-
-    localStorage.setItem("currentUser", JSON.stringify(currentUser));
-    showToast(`Status tugas diubah`, "success");
-    renderTasks(document.getElementById("view"));
 }
 
-async function deleteTask(index) {
+async function deleteTask(taskId) {
     if (confirm("Hapus tugas ini?")) {
-        const task = currentUser.tasks[index];
+        const taskIndex = currentUser.tasks.findIndex(t => t.id === taskId);
+        if (taskIndex === -1) return;
+        
+        const task = currentUser.tasks[taskIndex];
         
         ActivityManager.addActivity('task_deleted', `Menghapus tugas: ${task.title}`);
         
         try {
-            await FlowSyncAPI.deleteTask(task.id);
+            const result = await FlowSyncAPI.deleteTask(task.id);
+            if (result.success) {
+                currentUser.tasks.splice(taskIndex, 1);
+                localStorage.setItem("currentUser", JSON.stringify(currentUser));
+                showToast("Tugas berhasil dihapus", "success");
+                renderTasks(document.getElementById("view"));
+            } else {
+                showToast(result.message || "Gagal menghapus tugas!", "error");
+            }
         } catch (error) {
+            showToast("Terjadi kesalahan saat menghapus tugas!", "error");
             console.error('Error deleting task:', error);
         }
-
-        currentUser.tasks.splice(index, 1);
-        localStorage.setItem("currentUser", JSON.stringify(currentUser));
-        showToast("Tugas dihapus", "info");
-        renderTasks(document.getElementById("view"));
     }
 }
 
 // ============ Edit Task Function ============
-function editTask(index) {
-    const task = currentUser.tasks[index];
+function editTask(taskId) {
+    const taskIndex = currentUser.tasks.findIndex(t => t.id === taskId);
+    if (taskIndex === -1) return;
+    
+    const task = currentUser.tasks[taskIndex];
     
     // Buat modal edit
     const modal = document.createElement('div');
@@ -818,7 +842,7 @@ function editTask(index) {
                 </select>
             </div>
             <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                <button class="btn" onclick="saveTaskEdit(${index})" style="flex: 1;">
+                <button class="btn" onclick="saveTaskEdit(${task.id})" style="flex: 1;">
                     <i class="fas fa-save"></i> Simpan Perubahan
                 </button>
                 <button class="btn-secondary" onclick="this.closest('.modal').remove()" style="flex: 1;">
@@ -831,7 +855,10 @@ function editTask(index) {
     document.body.appendChild(modal);
 }
 
-async function saveTaskEdit(index) {
+async function saveTaskEdit(taskId) {
+    const taskIndex = currentUser.tasks.findIndex(t => t.id === taskId);
+    if (taskIndex === -1) return;
+
     const title = document.getElementById("editTaskTitle").value.trim();
     const deadline = document.getElementById("editTaskDeadline").value;
     const description = document.getElementById("editTaskDesc").value.trim();
@@ -850,11 +877,11 @@ async function saveTaskEdit(index) {
     };
 
     try {
-        const result = await FlowSyncAPI.updateTask(currentUser.tasks[index].id, updatedTask);
+        const result = await FlowSyncAPI.updateTask(taskId, updatedTask);
 
         if (result.success) {
             // Update local data
-            currentUser.tasks[index] = { ...currentUser.tasks[index], ...updatedTask };
+            currentUser.tasks[taskIndex] = { ...currentUser.tasks[taskIndex], ...updatedTask };
             localStorage.setItem("currentUser", JSON.stringify(currentUser));
             
             ActivityManager.addActivity('task_updated', `Mengedit tugas: ${title}`);
@@ -1331,7 +1358,11 @@ function renderTasks(container) {
 
             <h3>Daftar Tugas (${filteredTasks.length})</h3>
             ${filteredTasks.length > 0 ? 
-                filteredTasks.map((task, index) => `
+                filteredTasks.map((task) => {
+                    // Cari index asli di array tasks untuk referensi yang benar
+                    const originalIndex = currentUser.tasks.findIndex(t => t.id === task.id);
+                    
+                    return `
                     <div class="task-card">
                         <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 1rem;">
                             <div style="flex: 1; min-width: 250px;">
@@ -1344,13 +1375,22 @@ function renderTasks(container) {
                                 
                                 <!-- Tombol Aksi Status -->
                                 <div class="task-status-buttons">
-                                    <button class="status-btn todo-btn ${task.status === 'todo' ? 'active' : ''}" onclick="changeTaskStatus(${index}, 'todo')" title="Tandai sebagai Belum Dikerjakan">
+                                    <button class="status-btn todo-btn ${task.status === 'todo' ? 'active' : ''}" 
+                                            onclick="changeTaskStatus(${task.id}, 'todo')" 
+                                            title="Tandai sebagai Belum Dikerjakan"
+                                            ${task.status === 'todo' ? 'disabled' : ''}>
                                         <i class="fas fa-clock"></i> Belum
                                     </button>
-                                    <button class="status-btn inprogress-btn ${task.status === 'inprogress' ? 'active' : ''}" onclick="changeTaskStatus(${index}, 'inprogress')" title="Tandai sebagai Sedang Dikerjakan">
+                                    <button class="status-btn inprogress-btn ${task.status === 'inprogress' ? 'active' : ''}" 
+                                            onclick="changeTaskStatus(${task.id}, 'inprogress')" 
+                                            title="Tandai sebagai Sedang Dikerjakan"
+                                            ${task.status === 'inprogress' ? 'disabled' : ''}>
                                         <i class="fas fa-spinner"></i> Sedang
                                     </button>
-                                    <button class="status-btn done-btn ${task.status === 'done' ? 'active' : ''}" onclick="changeTaskStatus(${index}, 'done')" title="Tandai sebagai Selesai">
+                                    <button class="status-btn done-btn ${task.status === 'done' ? 'active' : ''}" 
+                                            onclick="changeTaskStatus(${task.id}, 'done')" 
+                                            title="Tandai sebagai Selesai"
+                                            ${task.status === 'done' ? 'disabled' : ''}>
                                         <i class="fas fa-check"></i> Selesai
                                     </button>
                                 </div>
@@ -1358,16 +1398,16 @@ function renderTasks(container) {
                             
                             <!-- Tombol Aksi Edit dan Delete -->
                             <div class="task-action-buttons">
-                                <button class="edit-btn" onclick="editTask(${index})" title="Edit Tugas">
+                                <button class="edit-btn" onclick="editTask(${task.id})" title="Edit Tugas">
                                     <i class="fas fa-edit"></i> Edit
                                 </button>
-                                <button class="delete-btn" onclick="deleteTask(${index})" title="Hapus Tugas">
+                                <button class="delete-btn" onclick="deleteTask(${task.id})" title="Hapus Tugas">
                                     <i class="fas fa-trash"></i> Hapus
                                 </button>
                             </div>
                         </div>
                     </div>
-                `).join('') : 
+                `}).join('') : 
                 '<div class="card" style="text-align: center; color: var(--gray); padding: var(--spacing-lg);"><p>Tidak ada tugas yang ditemukan</p></div>'
             }
         </div>
@@ -1438,7 +1478,7 @@ function renderKanban(container) {
                 <div class="kanban-column todo" ondrop="drop(event)" ondragover="allowDrop(event)">
                     <h3>Belum Dikerjakan <span class="status-badge todo">${todoTasks.length}</span></h3>
                     ${todoTasks.map((task, index) => `
-                        <div class="task-card" draggable="true" ondragstart="drag(event)" id="task-${index}">
+                        <div class="task-card" draggable="true" ondragstart="drag(event)" id="task-${task.id}">
                             <h4>${task.title}</h4>
                             ${task.description ? `<p>${task.description}</p>` : ''}
                             ${task.deadline ? `<small><i class="fas fa-calendar"></i> ${formatDate(task.deadline)}</small>` : ''}
@@ -1449,7 +1489,7 @@ function renderKanban(container) {
                 <div class="kanban-column inprogress" ondrop="drop(event)" ondragover="allowDrop(event)">
                     <h3>Sedang Dikerjakan <span class="status-badge inprogress">${inProgressTasks.length}</span></h3>
                     ${inProgressTasks.map((task, index) => `
-                        <div class="task-card" draggable="true" ondragstart="drag(event)" id="task-${index}">
+                        <div class="task-card" draggable="true" ondragstart="drag(event)" id="task-${task.id}">
                             <h4>${task.title}</h4>
                             ${task.description ? `<p>${task.description}</p>` : ''}
                             ${task.deadline ? `<small><i class="fas fa-calendar"></i> ${formatDate(task.deadline)}</small>` : ''}
@@ -1460,7 +1500,7 @@ function renderKanban(container) {
                 <div class="kanban-column done" ondrop="drop(event)" ondragover="allowDrop(event)">
                     <h3>Selesai <span class="status-badge done">${doneTasks.length}</span></h3>
                     ${doneTasks.map((task, index) => `
-                        <div class="task-card" draggable="true" ondragstart="drag(event)" id="task-${index}">
+                        <div class="task-card" draggable="true" ondragstart="drag(event)" id="task-${task.id}">
                             <h4>${task.title}</h4>
                             ${task.description ? `<p>${task.description}</p>` : ''}
                             ${task.deadline ? `<small><i class="fas fa-calendar"></i> ${formatDate(task.deadline)}</small>` : ''}
@@ -1490,8 +1530,8 @@ function drop(ev) {
     if (taskElement) {
         ev.target.closest('.kanban-column').appendChild(taskElement);
         
-        const taskIndex = parseInt(data.split('-')[1]);
-        changeTaskStatus(taskIndex, newStatus);
+        const taskId = parseInt(data.split('-')[1]);
+        changeTaskStatus(taskId, newStatus);
     }
 }
 
