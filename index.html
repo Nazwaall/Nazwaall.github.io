@@ -48,6 +48,14 @@
               <i class="fas fa-eye"></i>
             </button>
           </div>
+          
+          <!-- Lupa Password Link di sebelah kanan -->
+          <div style="text-align: right; margin-bottom: 1rem;">
+            <a href="#" id="showForgotPassword" style="color: var(--primary); text-decoration: none; font-size: 0.9rem;">
+              <i class="fas fa-key"></i> Lupa Password?
+            </a>
+          </div>
+          
           <button class="btn" id="btnLogin">Login</button>
           <button class="btn-secondary" id="btnDemo">Masuk Sebagai Demo</button>
           <p id="loginMsg" class="msg"></p>
@@ -76,6 +84,20 @@
           <button class="btn" id="btnReg">Register</button>
           <button class="btn-secondary" id="btnFillExample">Isi Contoh</button>
           <p id="regMsg" class="msg"></p>
+        </div>
+
+        <div id="forgotPasswordForm" class="form hidden">
+          <div class="input-group">
+            <i class="fas fa-envelope"></i>
+            <input id="forgotEmail" class="input" placeholder="Email terdaftar" />
+          </div>
+          <button class="btn" id="btnForgotPassword">Kirim Reset Link</button>
+          <p id="forgotMsg" class="msg"></p>
+          <p style="text-align: center; margin-top: 1rem; font-size: 0.9rem;">
+            <a href="#" id="backToLogin" style="color: var(--primary); text-decoration: none;">
+              <i class="fas fa-arrow-left"></i> Kembali ke Login
+            </a>
+          </p>
         </div>
       </div>
     </section>
@@ -128,6 +150,38 @@
       <div id="reportContent" class="report-content">
         <!-- Content akan diisi oleh JavaScript -->
       </div>
+    </div>
+  </div>
+
+  <!-- Modal Reset Password -->
+  <div id="resetPasswordModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fas fa-key"></i> Reset Password</h3>
+        <button class="modal-close" onclick="closeResetPasswordModal()">&times;</button>
+      </div>
+      <div class="input-group">
+        <i class="fas fa-user"></i>
+        <input id="resetUsername" class="input" placeholder="Username" readonly />
+      </div>
+      <div class="password-group">
+        <i class="fas fa-lock"></i>
+        <input id="resetNewPassword" class="input" type="password" placeholder="Password Baru" />
+        <button type="button" class="password-toggle" id="toggleResetPassword">
+          <i class="fas fa-eye"></i>
+        </button>
+      </div>
+      <div class="password-group">
+        <i class="fas fa-lock"></i>
+        <input id="resetConfirmPassword" class="input" type="password" placeholder="Konfirmasi Password" />
+        <button type="button" class="password-toggle" id="toggleResetConfirmPassword">
+          <i class="fas fa-eye"></i>
+        </button>
+      </div>
+      <input type="hidden" id="resetToken" />
+      <button class="btn" onclick="resetPassword()">
+        <i class="fas fa-save"></i> Reset Password
+      </button>
     </div>
   </div>
 

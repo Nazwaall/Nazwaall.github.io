@@ -5,6 +5,319 @@ let sidebarCollapsed = false;
 let currentTaskFilter = 'all';
 let currentTheme = localStorage.getItem("flowsync_theme") || "light";
 
+// ============ Desktop Notification System ============
+const NotificationManager = {
+    // Request permission untuk notifications
+    async requestPermission() {
+        if (!("Notification" in window)) {
+            console.log("Browser tidak mendukung desktop notification");
+            return false;
+        }
+        
+        if (Notification.permission === "granted") {
+            return true;
+        } else if (Notification.permission !== "denied") {
+            const permission = await Notification.requestPermission();
+            return permission === "granted";
+        }
+        return false;
+    },
+    
+    // Tampilkan desktop notification
+    showDesktopNotification(title, options = {}) {
+        if (!("Notification" in window) || Notification.permission !== "granted") {
+            return;
+        }
+        
+        const defaultOptions = {
+            icon: 'https://cdn-icons-png.flaticon.com/512/1998/1998675.png', // Icon FlowSync
+            badge: 'https://cdn-icons-png.flaticon.com/512/1998/1998675.png',
+            vibrate: [200, 100, 200],
+            tag: 'flowsync-notification',
+            renotify: true,
+            ...options
+        };
+        
+        const notification = new Notification(title, defaultOptions);
+        
+        // Handle klik pada notification
+        notification.onclick = function() {
+            window.focus();
+            this.close();
+            
+            // Focus ke aplikasi jika sedang di tab lain
+            if (document.hidden) {
+                window.focus();
+            }
+        };
+        
+        // Auto close setelah 10 detik
+        setTimeout(() => notification.close(), 10000);
+        
+        return notification;
+    },
+    
+    // Cek dan tampilkan notifikasi untuk deadline yang mendekati
+    async checkAndShowDeadlineNotifications() {
+        if (!currentUser || !currentUser.tasks) return;
+        
+        const permissionGranted = await this.requestPermission();
+        if (!permissionGranted) return;
+        
+        const now = new Date();
+        const upcomingDeadlines = currentUser.tasks.filter(task => {
+            if (!task.deadline || task.status === 'done') return false;
+            
+            const taskDeadline = new Date(task.deadline);
+            const timeDiff = taskDeadline - now;
+            const hoursDiff = Math.ceil(timeDiff / (1000 * 60 * 60));
+            
+            // Tampilkan notifikasi untuk deadline dalam 24 jam ke depan
+            return hoursDiff <= 24 && hoursDiff > 0;
+        });
+        
+        const overdueTasks = currentUser.tasks.filter(task => {
+            if (!task.deadline || task.status === 'done') return false;
+            
+            const taskDeadline = new Date(task.deadline);
+            const timeDiff = taskDeadline - now;
+            const hoursDiff = Math.ceil(timeDiff / (1000 * 60 * 60));
+            
+            // Tampilkan notifikasi untuk deadline yang sudah lewat
+            return hoursDiff <= 0;
+        });
+        
+        // Tampilkan notifikasi untuk setiap deadline mendekati
+        upcomingDeadlines.forEach(task => {
+            const taskDeadline = new Date(task.deadline);
+            const hoursDiff = Math.ceil((taskDeadline - now) / (1000 * 60 * 60));
+            
+            this.showDesktopNotification('⏰ Deadline Mendekat!', {
+                body: `"${task.title}" dalam ${hoursDiff} jam!`,
+                icon: 'https://cdn-icons-png.flaticon.com/512/3441/3441358.png',
+                requireInteraction: hoursDiff <= 3, // Interaksi jika <= 3 jam
+                silent: hoursDiff > 12 // Silent jika > 12 jam
+            });
+        });
+        
+        // Tampilkan notifikasi untuk deadline yang sudah lewat
+        overdueTasks.forEach(task => {
+            this.showDesktopNotification('🚨 Deadline Terlewat!', {
+                body: `"${task.title}" sudah melewati deadline!`,
+                icon: 'https://cdn-icons-png.flaticon.com/512/1828/1828843.png',
+                requireInteraction: true,
+                silent: false
+            });
+        });
+        
+        return { upcomingDeadlines, overdueTasks };
+    },
+    
+    // Cek dan tampilkan notifikasi produktivitas
+    async checkAndShowProductivityNotifications() {
+        if (!currentUser || !currentUser.tasks) return;
+        
+        const permissionGranted = await this.requestPermission();
+        if (!permissionGranted) return;
+        
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentDay = now.getDay(); // 0 = Minggu, 1 = Senin, dst
+        
+        // Skip notifikasi di akhir pekan (Sabtu = 6, Minggu = 0)
+        if (currentDay === 0 || currentDay === 6) return;
+        
+        // Cek waktu untuk pengingat produktivitas
+        // Pagi hari (8-10 AM) - Pengingat mulai kerja
+        if (currentHour >= 8 && currentHour <= 10) {
+            const pendingTasks = currentUser.tasks.filter(task => 
+                task.status !== 'done'
+            ).length;
+            
+            if (pendingTasks > 0) {
+                this.showDesktopNotification('🌅 Selamat Pagi!', {
+                    body: `Anda memiliki ${pendingTasks} tugas yang belum selesai. Ayo mulai kerjakan!`,
+                    icon: 'https://cdn-icons-png.flaticon.com/512/3076/3076134.png',
+                    silent: true
+                });
+            }
+        }
+        
+        // Siang hari (12-2 PM) - Pengingat istirahat
+        if (currentHour >= 12 && currentHour <= 14) {
+            this.showDesktopNotification('☀️ Waktu Istirahat!', {
+                body: 'Sudah waktunya istirahat sejenak. Jangan lupa makan siang!',
+                icon: 'https://cdn-icons-png.flaticon.com/512/3076/3076134.png',
+                silent: true
+            });
+        }
+        
+        // Sore hari (4-6 PM) - Pengingat evaluasi
+        if (currentHour >= 16 && currentHour <= 18) {
+            const completedToday = currentUser.tasks.filter(task => {
+                if (task.status !== 'done' || !task.completed_at) return false;
+                const completedDate = new Date(task.completed_at);
+                return completedDate.toDateString() === now.toDateString();
+            }).length;
+            
+            this.showDesktopNotification('🌇 Evaluasi Harian', {
+                body: `Hari ini Anda telah menyelesaikan ${completedToday} tugas. Tetap semangat!`,
+                icon: 'https://cdn-icons-png.flaticon.com/512/3076/3076134.png',
+                silent: true
+            });
+        }
+        
+        // Malam hari (8-10 PM) - Pengingat istirahat malam
+        if (currentHour >= 20 && currentHour <= 22) {
+            const pendingTasks = currentUser.tasks.filter(task => 
+                task.status !== 'done'
+            ).length;
+            
+            if (pendingTasks > 0) {
+                this.showDesktopNotification('🌙 Waktu Istirahat Malam', {
+                    body: `Masih ada ${pendingTasks} tugas yang belum selesai. Jangan lupa istirahat yang cukup!`,
+                    icon: 'https://cdn-icons-png.flaticon.com/512/3076/3076134.png',
+                    silent: true
+                });
+            }
+        }
+        
+        // Cek tugas yang belum disentuh dalam 3 hari
+        const staleTasks = currentUser.tasks.filter(task => {
+            if (task.status === 'done') return false;
+            
+            const createdDate = new Date(task.created_at);
+            const daysSinceCreation = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
+            
+            return daysSinceCreation >= 3;
+        });
+        
+        if (staleTasks.length > 0) {
+            this.showDesktopNotification('📌 Tugas Tertunda', {
+                body: `Anda memiliki ${staleTasks.length} tugas yang belum disentuh dalam 3 hari.`,
+                icon: 'https://cdn-icons-png.flaticon.com/512/1828/1828843.png',
+                silent: true
+            });
+        }
+        
+        // Cek jika ada tugas dengan prioritas tinggi yang belum dikerjakan
+        const highPriorityTasks = currentUser.tasks.filter(task => 
+            task.status !== 'done' && 
+            task.deadline && 
+            new Date(task.deadline) <= new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) // Deadline dalam 2 hari
+        );
+        
+        if (highPriorityTasks.length > 0 && currentHour >= 9 && currentHour <= 17) {
+            this.showDesktopNotification('⚠️ Tugas Prioritas Tinggi', {
+                body: `Ada ${highPriorityTasks.length} tugas dengan deadline dekat yang perlu perhatian!`,
+                icon: 'https://cdn-icons-png.flaticon.com/512/1828/1828843.png',
+                requireInteraction: highPriorityTasks.length >= 3
+            });
+        }
+    },
+    
+    // Cek dan tampilkan semua notifikasi
+    async checkAllNotifications() {
+        if (!currentUser) return;
+        
+        await this.checkAndShowDeadlineNotifications();
+        await this.checkAndShowProductivityNotifications();
+    },
+    
+    // Setup periodic notification checks
+    setupPeriodicNotifications() {
+        // Hapus interval sebelumnya jika ada
+        if (this.notificationInterval) {
+            clearInterval(this.notificationInterval);
+        }
+        if (this.productivityInterval) {
+            clearInterval(this.productivityInterval);
+        }
+        
+        // Cek setiap 30 menit untuk notifikasi produktivitas (hanya di jam kerja)
+        this.productivityInterval = setInterval(() => {
+            if (currentUser && document.visibilityState === 'visible') {
+                const now = new Date();
+                const currentHour = now.getHours();
+                const currentDay = now.getDay();
+                
+                // Hanya di jam kerja (Senin-Jumat, 8 AM - 6 PM)
+                if (currentDay >= 1 && currentDay <= 5 && currentHour >= 8 && currentHour <= 18) {
+                    this.checkAndShowProductivityNotifications();
+                }
+            }
+        }, 30 * 60 * 1000); // 30 menit
+        
+        // Cek setiap 1 jam untuk deadline notifications
+        this.notificationInterval = setInterval(() => {
+            if (currentUser) {
+                this.checkAndShowDeadlineNotifications();
+            }
+        }, 60 * 60 * 1000); // 1 jam
+        
+        // Cek setiap hari jam 9 pagi untuk daily reminder (hari kerja)
+        const now = new Date();
+        const next9AM = new Date();
+        next9AM.setHours(9, 0, 0, 0);
+        
+        if (now > next9AM) {
+            next9AM.setDate(next9AM.getDate() + 1);
+        }
+        
+        const timeUntil9AM = next9AM - now;
+        
+        this.dailyReminderTimeout = setTimeout(() => {
+            if (currentUser) {
+                const today = new Date();
+                if (today.getDay() >= 1 && today.getDay() <= 5) { // Senin-Jumat
+                    const pendingTasks = currentUser.tasks?.filter(task => 
+                        task.status !== 'done'
+                    ).length || 0;
+                    
+                    if (pendingTasks > 0) {
+                        this.showDesktopNotification('📋 Daily Standup Reminder', {
+                            body: `Anda memiliki ${pendingTasks} tugas yang belum selesai. Apa yang akan Anda kerjakan hari ini?`,
+                            icon: 'https://cdn-icons-png.flaticon.com/512/3076/3076134.png',
+                            requireInteraction: true
+                        });
+                    }
+                }
+            }
+            
+            // Set ulang untuk besok
+            this.setupPeriodicNotifications();
+        }, timeUntil9AM);
+    },
+    
+    // Initialize notification system
+    initialize() {
+        this.requestPermission();
+        
+        // Inisialisasi hanya jika user sudah login
+        if (currentUser) {
+            this.setupPeriodicNotifications();
+            
+            // Cek notifikasi saat app dimuat (tunggu 3 detik)
+            setTimeout(() => {
+                this.checkAllNotifications();
+            }, 3000);
+        }
+    },
+    
+    // Cleanup notifications
+    cleanup() {
+        if (this.notificationInterval) {
+            clearInterval(this.notificationInterval);
+        }
+        if (this.productivityInterval) {
+            clearInterval(this.productivityInterval);
+        }
+        if (this.dailyReminderTimeout) {
+            clearTimeout(this.dailyReminderTimeout);
+        }
+    }
+};
+
 // ============ FlowSyncAPI Implementation ============
 const FlowSyncAPI = {
     // Simulate API delay
@@ -63,6 +376,104 @@ const FlowSyncAPI = {
             success: true,
             user: { ...newUser },
             message: "Registrasi berhasil!"
+        };
+    },
+
+    // Password Reset Functions
+    async requestPasswordReset(email) {
+        await this.delay(600);
+        
+        const user = users.find(u => u.email === email);
+        if (!user) {
+            return {
+                success: false,
+                message: "Email tidak ditemukan!"
+            };
+        }
+        
+        // Generate reset token (sederhana untuk demo)
+        const resetToken = Date.now().toString(36) + Math.random().toString(36).substr(2);
+        const resetExpiry = Date.now() + 3600000; // 1 jam dari sekarang
+        
+        // Simpan token ke user
+        user.resetToken = resetToken;
+        user.resetExpiry = resetExpiry;
+        
+        localStorage.setItem("flowsync_users", JSON.stringify(users));
+        
+        // Di aplikasi nyata, di sini akan mengirim email dengan token
+        // Untuk demo, kita simpan token di localStorage untuk simulasi
+        localStorage.setItem("reset_token_" + user.id, JSON.stringify({
+            token: resetToken,
+            userId: user.id,
+            username: user.username,
+            expires: resetExpiry
+        }));
+        
+        return {
+            success: true,
+            token: resetToken,
+            username: user.username,
+            message: "Link reset password telah dikirim ke email Anda!"
+        };
+    },
+
+    async verifyResetToken(token) {
+        await this.delay(300);
+        
+        // Cari token di localStorage (simulasi)
+        for (let user of users) {
+            const storedToken = localStorage.getItem("reset_token_" + user.id);
+            if (storedToken) {
+                const tokenData = JSON.parse(storedToken);
+                if (tokenData.token === token && tokenData.expires > Date.now()) {
+                    return {
+                        success: true,
+                        userId: user.id,
+                        username: user.username
+                    };
+                }
+            }
+        }
+        
+        return {
+            success: false,
+            message: "Token reset tidak valid atau telah kedaluwarsa!"
+        };
+    },
+
+    async updatePassword(userId, newPassword, token) {
+        await this.delay(600);
+        
+        const userIndex = users.findIndex(u => u.id === userId);
+        if (userIndex === -1) {
+            return { success: false, message: "User tidak ditemukan!" };
+        }
+        
+        // Verifikasi token
+        const storedToken = localStorage.getItem("reset_token_" + userId);
+        if (!storedToken) {
+            return { success: false, message: "Token tidak valid!" };
+        }
+        
+        const tokenData = JSON.parse(storedToken);
+        if (tokenData.token !== token || tokenData.expires <= Date.now()) {
+            return { success: false, message: "Token tidak valid atau kedaluwarsa!" };
+        }
+        
+        // Update password
+        users[userIndex].password = newPassword;
+        
+        // Hapus token setelah digunakan
+        delete users[userIndex].resetToken;
+        delete users[userIndex].resetExpiry;
+        localStorage.removeItem("reset_token_" + userId);
+        
+        localStorage.setItem("flowsync_users", JSON.stringify(users));
+        
+        return {
+            success: true,
+            message: "Password berhasil direset! Silakan login dengan password baru."
         };
     },
 
@@ -440,6 +851,34 @@ function initPasswordToggles() {
     if (regToggle) {
         regToggle.addEventListener('click', togglePasswordVisibility);
     }
+    
+    // Initialize reset password toggles
+    const resetToggle = document.getElementById('toggleResetPassword');
+    const resetConfirmToggle = document.getElementById('toggleResetConfirmPassword');
+    
+    if (resetToggle) {
+        resetToggle.addEventListener('click', togglePasswordVisibility);
+    }
+    
+    if (resetConfirmToggle) {
+        resetConfirmToggle.addEventListener('click', togglePasswordVisibility);
+    }
+}
+
+// ============ Date Input Enhancement ============
+function initializeDateInputs() {
+    // Set tanggal minimum ke hari ini untuk semua input date
+    const today = new Date().toISOString().split('T')[0];
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    
+    dateInputs.forEach(input => {
+        input.min = today;
+        
+        // Format placeholder untuk browser yang tidak support date input
+        if (input.type === 'text') {
+            input.placeholder = 'YYYY-MM-DD';
+        }
+    });
 }
 
 // ============ Activity System ============
@@ -581,14 +1020,7 @@ const DeadlineManager = {
         if (upcomingDeadlines.length === 0) return '';
         
         return `
-            <div class="deadline-warning" style="
-                background: linear-gradient(90deg, var(--warning), #fbbf24);
-                color: white;
-                padding: 1rem;
-                border-radius: 12px;
-                margin-bottom: 1rem;
-                animation: pulse 2s infinite;
-            ">
+            <div class="deadline-warning">
                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
                     <i class="fas fa-exclamation-triangle" style="font-size: 1.2rem;"></i>
                     <strong style="font-size: 1rem;">Deadline Mendekat!</strong>
@@ -600,6 +1032,32 @@ const DeadlineManager = {
         `;
     }
 };
+
+// ============ Daily Motivation System ============
+const dailyMotivations = [
+    "Produktivitas bukan tentang melakukan lebih banyak, tapi tentang melakukan yang penting.",
+    "Mulailah dari yang kecil. Konsistensi adalah kunci kesukseksesan.",
+    "Jangan menunggu sempurna untuk memulai. Mulai saja, lalu sempurnakan.",
+    "Waktu adalah aset paling berharga. Kelola dengan bijak.",
+    "Setiap tugas yang diselesaikan adalah langkah menuju tujuan.",
+    "Fokus pada satu tugas pada satu waktu. Multitasking mengurangi kualitas.",
+    "Istirahat yang cukup adalah bagian dari produktivitas.",
+    "Rayakan pencapaian kecil, mereka membawa pada kesukseksesan besar.",
+    "Disiplin hari ini menentukan kesukseksesan besok.",
+    "Kualitas lebih penting dari kuantitas. Lakukan yang terbaik dalam setiap tugas."
+];
+
+function showNewMotivation() {
+    const randomIndex = Math.floor(Math.random() * dailyMotivations.length);
+    const motivationElement = document.getElementById('dailyMotivation');
+    if (motivationElement) {
+        motivationElement.textContent = `"${dailyMotivations[randomIndex]}"`;
+        motivationElement.style.animation = 'fadeInUp 0.5s ease';
+        setTimeout(() => {
+            motivationElement.style.animation = '';
+        }, 500);
+    }
+}
 
 // ============ Authentication Functions ============
 async function handleLogin() {
@@ -628,6 +1086,16 @@ async function handleLogin() {
             
             msg.textContent = "";
             showToast(`Selamat datang, ${currentUser.name}!`, "success");
+            
+            // Inisialisasi notifikasi setelah login
+            NotificationManager.initialize();
+            
+            // Tampilkan notifikasi deadline jika ada
+            setTimeout(() => {
+                DeadlineManager.showDeadlineNotifications();
+                NotificationManager.checkAllNotifications();
+            }, 1500);
+            
             renderApp();
         } else {
             msg.textContent = result.message || "Login gagal!";
@@ -685,6 +1153,117 @@ async function handleRegister() {
     }
 }
 
+// ============ Forgot Password Functions ============
+async function handleForgotPassword() {
+    const email = document.getElementById("forgotEmail").value.trim();
+    const msg = document.getElementById("forgotMsg");
+    const btn = document.getElementById("btnForgotPassword");
+    
+    if (!email) {
+        msg.textContent = "Email harus diisi!";
+        msg.style.color = "var(--danger)";
+        return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        msg.textContent = "Format email tidak valid!";
+        msg.style.color = "var(--danger)";
+        return;
+    }
+    
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<div class="loading"></div> Memproses...';
+    btn.disabled = true;
+    
+    try {
+        const result = await FlowSyncAPI.requestPasswordReset(email);
+        
+        if (result.success) {
+            msg.style.color = "var(--success)";
+            msg.textContent = result.message;
+            
+            // Untuk demo, tampilkan modal reset password langsung
+            openResetPasswordModal(result.username, result.token);
+            
+            // Reset form
+            document.getElementById("forgotEmail").value = "";
+        } else {
+            msg.style.color = "var(--danger)";
+            msg.textContent = result.message;
+        }
+    } catch (error) {
+        msg.style.color = "var(--danger)";
+        msg.textContent = error.message || "Terjadi kesalahan!";
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+function openResetPasswordModal(username, token) {
+    document.getElementById('resetUsername').value = username;
+    document.getElementById('resetToken').value = token;
+    document.getElementById('resetNewPassword').value = '';
+    document.getElementById('resetConfirmPassword').value = '';
+    document.getElementById('resetPasswordModal').classList.add('show');
+}
+
+function closeResetPasswordModal() {
+    document.getElementById('resetPasswordModal').classList.remove('show');
+}
+
+async function resetPassword() {
+    const username = document.getElementById('resetUsername').value;
+    const newPassword = document.getElementById('resetNewPassword').value.trim();
+    const confirmPassword = document.getElementById('resetConfirmPassword').value.trim();
+    const token = document.getElementById('resetToken').value;
+    
+    if (!newPassword || !confirmPassword) {
+        showToast("Password baru dan konfirmasi harus diisi!", "error");
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        showToast("Password dan konfirmasi password tidak cocok!", "error");
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        showToast("Password minimal 6 karakter!", "error");
+        return;
+    }
+    
+    try {
+        // Cari user berdasarkan username
+        const user = users.find(u => u.username === username);
+        if (!user) {
+            showToast("User tidak ditemukan!", "error");
+            return;
+        }
+        
+        const result = await FlowSyncAPI.updatePassword(user.id, newPassword, token);
+        
+        if (result.success) {
+            showToast(result.message, "success");
+            closeResetPasswordModal();
+            
+            // Kembali ke halaman login
+            switchTab("login");
+            document.getElementById("loginUser").value = username;
+            document.getElementById("forgotEmail").value = "";
+            document.getElementById("forgotMsg").textContent = "";
+            
+            // Tambah aktivitas
+            ActivityManager.addActivity('password_reset', `Reset password untuk akun ${username}`);
+        } else {
+            showToast(result.message, "error");
+        }
+    } catch (error) {
+        showToast("Terjadi kesalahan!", "error");
+    }
+}
+
 function demoLogin() {
     document.getElementById("loginUser").value = "admin";
     document.getElementById("loginPass").value = "admin";
@@ -732,6 +1311,11 @@ async function addTask() {
             showToast("Tugas berhasil ditambahkan!", "success");
             renderTasks(document.getElementById("view"));
             
+            // Cek notifikasi setelah menambah tugas
+            setTimeout(() => {
+                NotificationManager.checkAndShowDeadlineNotifications();
+            }, 1000);
+            
             document.getElementById("taskTitle").value = '';
             document.getElementById("taskDeadline").value = '';
             document.getElementById("taskDesc").value = '';
@@ -770,6 +1354,9 @@ async function changeTaskStatus(taskId, newStatus) {
             
             // Refresh tampilan
             renderTasks(document.getElementById("view"));
+            
+            // Cek notifikasi setelah mengubah status
+            NotificationManager.checkAndShowProductivityNotifications();
         } else {
             showToast(result.message || "Gagal mengubah status tugas!", "error");
         }
@@ -826,8 +1413,9 @@ function editTask(taskId) {
                 <input type="text" id="editTaskTitle" class="input" value="${task.title}" placeholder="Judul Tugas">
             </div>
             <div class="input-group">
+                <label style="display: block; margin-bottom: 0.3rem; color: var(--gray); font-size: 0.8rem; padding-left: 2.5rem;">Tanggal Deadline</label>
                 <i class="fas fa-calendar"></i>
-                <input type="date" id="editTaskDeadline" class="input" value="${task.deadline || ''}">
+                <input type="date" id="editTaskDeadline" class="input" value="${task.deadline || ''}" placeholder="Tanggal Deadline">
             </div>
             <div class="input-group">
                 <i class="fas fa-align-left"></i>
@@ -887,6 +1475,9 @@ async function saveTaskEdit(taskId) {
             ActivityManager.addActivity('task_updated', `Mengedit tugas: ${title}`);
             
             showToast("Tugas berhasil diperbarui!", "success");
+            
+            // Cek notifikasi setelah mengedit tugas
+            NotificationManager.checkAndShowDeadlineNotifications();
             
             // Tutup modal dan refresh tampilan
             document.querySelector('.modal.show')?.remove();
@@ -1188,12 +1779,15 @@ function closeMobileSidebar() {
 function switchTab(tab) {
     document.getElementById("loginForm").classList.toggle("hidden", tab !== "login");
     document.getElementById("regForm").classList.toggle("hidden", tab !== "register");
+    document.getElementById("forgotPasswordForm").classList.toggle("hidden", tab !== "forgot");
     
     document.getElementById("tab-login").classList.toggle("active", tab === "login");
     document.getElementById("tab-reg").classList.toggle("active", tab === "register");
+    document.getElementById("tab-forgot").classList.toggle("active", tab === "forgot");
     
     document.getElementById("loginMsg").textContent = "";
     document.getElementById("regMsg").textContent = "";
+    document.getElementById("forgotMsg").textContent = "";
     
     // Initialize password toggles when switching tabs
     setTimeout(initPasswordToggles, 50);
@@ -1229,6 +1823,22 @@ function renderDashboard(container) {
     const totalProjects = currentUser.projects?.length || 0;
     
     const progressPercentage = totalTasks > 0 ? Math.round((doneCount / totalTasks) * 100) : 0;
+    
+    // Hitung tugas yang mendekati deadline
+    const upcomingDeadlines = DeadlineManager.checkDeadlines();
+    const overdueTasks = currentUser.tasks?.filter(task => {
+        if (!task.deadline || task.status === 'done') return false;
+        const taskDeadline = new Date(task.deadline);
+        return taskDeadline < new Date();
+    }) || [];
+
+    // Hitung tugas dengan deadline dalam 3 hari
+    const highPriorityTasks = currentUser.tasks?.filter(task => {
+        if (!task.deadline || task.status === 'done') return false;
+        const taskDeadline = new Date(task.deadline);
+        const daysDiff = Math.ceil((taskDeadline - new Date()) / (1000 * 60 * 60 * 24));
+        return daysDiff <= 3 && daysDiff > 0;
+    }) || [];
 
     container.innerHTML = `
         <div class="card">
@@ -1237,6 +1847,46 @@ function renderDashboard(container) {
             
             ${DeadlineManager.renderDeadlineWarning()}
         </div>
+
+        <!-- High Priority Tasks -->
+        ${highPriorityTasks.length > 0 ? `
+            <div class="card" style="border-left: 4px solid var(--warning);">
+                <div style="display: flex; align-items: center; gap: 0.8rem;">
+                    <div class="notification-icon" style="background: #fef3c7;">
+                        <i class="fas fa-exclamation" style="color: #d97706;"></i>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 0.2rem 0; color: var(--warning);">Tugas Prioritas Tinggi</h4>
+                        <p style="margin: 0; font-size: 0.9rem;">
+                            ${highPriorityTasks.length} tugas deadline dalam 3 hari
+                        </p>
+                    </div>
+                </div>
+                <button class="btn" onclick="showView('tasks')" style="margin-top: 1rem; width: 100%; padding: 0.8rem; background: var(--warning);">
+                    <i class="fas fa-exclamation-circle"></i> Segera Kerjakan
+                </button>
+            </div>
+        ` : ''}
+
+        <!-- Overdue Tasks Warning -->
+        ${overdueTasks.length > 0 ? `
+            <div class="card overdue-notification">
+                <div style="display: flex; align-items: center; gap: 0.8rem;">
+                    <div class="notification-icon" style="background: #fee2e2;">
+                        <i class="fas fa-exclamation-triangle" style="color: #dc2626;"></i>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 0.2rem 0; color: var(--danger);">Tugas Terlambat!</h4>
+                        <p style="margin: 0; font-size: 0.9rem;">
+                            ${overdueTasks.length} tugas sudah melewati deadline
+                        </p>
+                    </div>
+                </div>
+                <button class="btn" onclick="showView('tasks')" style="margin-top: 1rem; width: 100%; padding: 0.8rem; background: var(--danger);">
+                    <i class="fas fa-exclamation-circle"></i> Segera Selesaikan
+                </button>
+            </div>
+        ` : ''}
 
         <div class="stats-container">
             <div class="stat-card total">
@@ -1269,19 +1919,49 @@ function renderDashboard(container) {
             <p style="text-align: center;">${doneCount} dari ${totalTasks} tugas selesai</p>
         </div>
 
+        <!-- Daily Motivation -->
+        <div class="card motivation-card">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div class="notification-icon" style="background: rgba(79, 70, 229, 0.1);">
+                    <i class="fas fa-fire" style="color: var(--primary); font-size: 1.2rem;"></i>
+                </div>
+                <div>
+                    <h3 style="margin: 0; color: var(--primary);">💡 Motivasi Hari Ini</h3>
+                    <p style="margin: 0.3rem 0 0 0; color: var(--gray);" id="dailyMotivation">
+                        "Produktivitas bukan tentang melakukan lebih banyak, tapi tentang melakukan yang penting."
+                    </p>
+                </div>
+            </div>
+            <button class="btn-secondary" onclick="showNewMotivation()" style="margin-top: 1rem; background: var(--card-bg); color: var(--primary); border: 1px solid var(--primary);">
+                <i class="fas fa-sync-alt"></i> Motivasi Lainnya
+            </button>
+        </div>
+
         <div class="dashboard-grid">
             <div class="card">
                 <h3><i class="fas fa-list-ul"></i> Tugas Terbaru</h3>
                 ${currentUser.tasks && currentUser.tasks.length > 0 ? 
-                    currentUser.tasks.slice(0, 5).map(task => `
-                        <div style="padding: 0.8rem 0; border-bottom: 1px solid var(--border);">
+                    currentUser.tasks.slice(0, 5).map(task => {
+                        const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== 'done';
+                        const isDueToday = task.deadline && new Date(task.deadline).toDateString() === new Date().toDateString();
+                        const isDueSoon = task.deadline && !isOverdue && !isDueToday && 
+                                          new Date(task.deadline) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+                        
+                        return `
+                        <div class="task-item ${isOverdue ? 'overdue-task' : isDueToday ? 'due-today-task' : isDueSoon ? 'due-soon-task' : ''}">
                             <strong style="color: var(--dark);">${task.title}</strong>
                             <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--gray); margin-top: 0.3rem;">
                                 <span class="status-badge ${task.status}">${getStatusText(task.status)}</span>
-                                ${task.deadline ? `<span>${formatDate(task.deadline)}</span>` : ''}
+                                ${task.deadline ? `
+                                    <span style="${isOverdue ? 'color: var(--danger);' : isDueToday ? 'color: var(--warning);' : isDueSoon ? 'color: var(--info);' : ''}">
+                                        <i class="fas fa-calendar${isOverdue ? '-times' : ''}"></i> 
+                                        ${formatDate(task.deadline)}
+                                        ${isOverdue ? ' (Terlambat)' : ''}
+                                    </span>
+                                ` : ''}
                             </div>
                         </div>
-                    `).join('') : 
+                    `}).join('') : 
                     '<p style="text-align: center; color: var(--gray); padding: var(--spacing-md);">Belum ada tugas</p>'
                 }
             </div>
@@ -1290,7 +1970,7 @@ function renderDashboard(container) {
                 <h3><i class="fas fa-project-diagram"></i> Proyek Aktif</h3>
                 ${currentUser.projects && currentUser.projects.length > 0 ? 
                     currentUser.projects.slice(0, 5).map(project => `
-                        <div style="padding: 0.8rem 0; border-bottom: 1px solid var(--border);">
+                        <div class="project-item">
                             <strong style="color: var(--dark);">${project.title}</strong>
                             <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.3rem;">
                                 ${project.deadline ? `Deadline: ${formatDate(project.deadline)}` : 'Tidak ada deadline'}
@@ -1336,8 +2016,9 @@ function renderTasks(container) {
                     <input type="text" id="taskTitle" class="input" placeholder="Judul Tugas">
                 </div>
                 <div class="input-group">
+                    <label style="display: block; margin-bottom: 0.3rem; color: var(--gray); font-size: 0.8rem; padding-left: 2.5rem;">Tanggal Deadline</label>
                     <i class="fas fa-calendar"></i>
-                    <input type="date" id="taskDeadline" class="input">
+                    <input type="date" id="taskDeadline" class="input" placeholder="Tanggal Deadline">
                 </div>
                 <div class="input-group">
                     <i class="fas fa-align-left"></i>
@@ -1428,8 +2109,9 @@ function renderProjects(container) {
                     <input type="text" id="projectTitle" class="input" placeholder="Judul Proyek">
                 </div>
                 <div class="input-group">
+                    <label style="display: block; margin-bottom: 0.3rem; color: var(--gray); font-size: 0.8rem; padding-left: 2.5rem;">Tanggal Deadline</label>
                     <i class="fas fa-calendar"></i>
-                    <input type="date" id="projectDeadline" class="input">
+                    <input type="date" id="projectDeadline" class="input" placeholder="Tanggal Deadline">
                 </div>
                 <div class="input-group">
                     <i class="fas fa-align-left"></i>
@@ -1512,6 +2194,81 @@ function renderKanban(container) {
     `;
 }
 
+// ============ App Initialization ============
+function renderApp() {
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+
+    // Update theme toggle dengan emoji yang sesuai (tanpa lonceng)
+    document.querySelector(".app-header nav").innerHTML = `
+        <button class="theme-toggle" onclick="toggleTheme()">
+            ${currentTheme === "light" ? '🌙' : '☀️'}
+        </button>
+    `;
+
+    document.getElementById("app").innerHTML = `
+        <!-- Overlay untuk mobile -->
+        <div class="sidebar-overlay" onclick="closeMobileSidebar()"></div>
+        
+        <div class="app-grid ${sidebarCollapsed ? 'sidebar-collapsed' : ''}">
+            <aside class="sidebar">
+                <div class="profile">
+                    <div class="avatar">${currentUser.name[0].toUpperCase()}</div>
+                    <div>
+                        <strong>${currentUser.name}</strong><br>
+                        <small>@${currentUser.username}</small>
+                    </div>
+                </div>
+                <div class="quick">
+                    <button class="btn-secondary" onclick="showView('dashboard'); closeMobileSidebar();">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </button>
+                    <button class="btn-secondary" onclick="showView('tasks'); closeMobileSidebar();">
+                        <i class="fas fa-tasks"></i> Tugas
+                    </button>
+                    <button class="btn-secondary" onclick="showView('projects'); closeMobileSidebar();">
+                        <i class="fas fa-project-diagram"></i> Proyek
+                    </button>
+                    <button class="btn-secondary" onclick="showView('kanban'); closeMobileSidebar();">
+                        <i class="fas fa-columns"></i> Kanban
+                    </button>
+                    <button class="btn-secondary" onclick="openReportModal(); closeMobileSidebar();">
+                        <i class="fas fa-chart-line"></i> Laporan
+                    </button>
+                </div>
+                <div class="notify">
+                    <h4><i class="fas fa-history"></i> History Notifikasi</h4>
+                    <div id="notifList"></div>
+                </div>
+            </aside>
+            <section id="view"></section>
+        </div>
+    `;
+
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    if (sidebarToggle) {
+        sidebarToggle.onclick = toggleSidebar;
+    }
+
+    // Initialize notification system
+    NotificationManager.initialize();
+    
+    // Tampilkan notifikasi deadline
+    setTimeout(() => {
+        DeadlineManager.showDeadlineNotifications();
+        NotificationManager.checkAllNotifications();
+    }, 2000);
+
+    // Periksa deadline setiap 5 menit
+    setInterval(() => {
+        DeadlineManager.showDeadlineNotifications();
+    }, 5 * 60 * 1000);
+
+    renderUserProfile();
+    ActivityManager.renderActivities();
+    showView("dashboard");
+}
+
 // ============ Utility Functions ============
 function allowDrop(ev) {
     ev.preventDefault();
@@ -1551,8 +2308,33 @@ function getStatusText(status) {
 
 function formatDate(dateString) {
     if (!dateString) return '-';
-    const options = { day: 'numeric', month: 'long', year: 'numeric' };
-    return new Date(dateString).toLocaleDateString('id-ID', options);
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = date - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Jika deadline hari ini
+    if (diffDays === 0) {
+        return 'Hari ini';
+    }
+    // Jika deadline besok
+    else if (diffDays === 1) {
+        return 'Besok';
+    }
+    // Jika deadline kemarin
+    else if (diffDays === -1) {
+        return 'Kemarin';
+    }
+    // Jika sudah lewat
+    else if (diffDays < 0) {
+        return `${Math.abs(diffDays)} hari yang lalu`;
+    }
+    // Jika masih akan datang
+    else {
+        const options = { day: 'numeric', month: 'long', year: 'numeric' };
+        return date.toLocaleDateString('id-ID', options);
+    }
 }
 
 function showToast(message, type = "info") {
@@ -1562,6 +2344,17 @@ function showToast(message, type = "info") {
     toast.textContent = message;
     toast.className = "toast show";
     
+    // Tambah warna berdasarkan type
+    if (type === "success") {
+        toast.style.background = "var(--success)";
+    } else if (type === "error") {
+        toast.style.background = "var(--danger)";
+    } else if (type === "warning") {
+        toast.style.background = "var(--warning)";
+    } else {
+        toast.style.background = "var(--primary)";
+    }
+    
     setTimeout(() => {
         toast.className = "toast";
     }, 3000);
@@ -1570,6 +2363,10 @@ function showToast(message, type = "info") {
 function logout() {
     if (confirm("Yakin ingin logout?")) {
         ActivityManager.addActivity('logout', `Logout dari akun`);
+        
+        // Cleanup notifications
+        NotificationManager.cleanup();
+        
         currentUser = null;
         localStorage.removeItem("currentUser");
         location.reload();
@@ -1577,78 +2374,18 @@ function logout() {
 }
 
 // ============ App Initialization ============
-function renderApp() {
-    document.body.scrollTop = 0;
-    document.documentElement.scrollTop = 0;
-
-    // Update theme toggle dengan emoji yang sesuai
-    document.querySelector(".app-header nav").innerHTML = `
-        <button class="theme-toggle" onclick="toggleTheme()">
-            ${currentTheme === "light" ? '🌙' : '☀️'}
-        </button>
-    `;
-
-    document.getElementById("app").innerHTML = `
-        <!-- Overlay untuk mobile -->
-        <div class="sidebar-overlay" onclick="closeMobileSidebar()"></div>
-        
-        <div class="app-grid ${sidebarCollapsed ? 'sidebar-collapsed' : ''}">
-            <aside class="sidebar">
-                <div class="profile">
-                    <div class="avatar">${currentUser.name[0].toUpperCase()}</div>
-                    <div>
-                        <strong>${currentUser.name}</strong><br>
-                        <small>@${currentUser.username}</small>
-                    </div>
-                </div>
-                <div class="quick">
-                    <button class="btn-secondary" onclick="showView('dashboard'); closeMobileSidebar();">
-                        <i class="fas fa-tachometer-alt"></i> Dashboard
-                    </button>
-                    <button class="btn-secondary" onclick="showView('tasks'); closeMobileSidebar();">
-                        <i class="fas fa-tasks"></i> Tugas
-                    </button>
-                    <button class="btn-secondary" onclick="showView('projects'); closeMobileSidebar();">
-                        <i class="fas fa-project-diagram"></i> Proyek
-                    </button>
-                    <button class="btn-secondary" onclick="showView('kanban'); closeMobileSidebar();">
-                        <i class="fas fa-columns"></i> Kanban
-                    </button>
-                    <button class="btn-secondary" onclick="openReportModal(); closeMobileSidebar();">
-                        <i class="fas fa-chart-line"></i> Laporan
-                    </button>
-                </div>
-                <div class="notify">
-                    <h4><i class="fas fa-bell"></i> Aktivitas Terbaru</h4>
-                    <div id="notifList"></div>
-                </div>
-            </aside>
-            <section id="view"></section>
-        </div>
-    `;
-
-    const sidebarToggle = document.getElementById('sidebarToggle');
-    if (sidebarToggle) {
-        sidebarToggle.onclick = toggleSidebar;
-    }
-
-    // Tampilkan notifikasi deadline
-    setTimeout(() => {
-        DeadlineManager.showDeadlineNotifications();
-    }, 2000);
-
-    // Periksa deadline setiap 5 menit
-    setInterval(() => {
-        DeadlineManager.showDeadlineNotifications();
-    }, 5 * 60 * 1000);
-
-    renderUserProfile();
-    ActivityManager.renderActivities();
-    showView("dashboard");
-}
-
 function initDemoData() {
     const demoUser = users.find(u => u.username === "admin");
+    
+    // Buat tanggal untuk deadline hari ini (26 Desember 2025)
+    const today = new Date(2025, 11, 26); // 26 Desember 2025 (month index 11 = Desember)
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    // Format tanggal untuk input date (YYYY-MM-DD)
+    const formatDateForInput = (date) => {
+        return date.toISOString().split('T')[0];
+    };
     
     if (!demoUser) {
         const demoData = {
@@ -1661,20 +2398,74 @@ function initDemoData() {
             tasks: [
                 { 
                     id: 1, 
-                    title: "Buat laporan proyek", 
-                    description: "Laporan akhir untuk klien", 
-                    deadline: "2025-06-15", 
+                    title: "Laporan Bulanan Desember 2025", 
+                    description: "Selesaikan laporan bulanan untuk diserahkan ke manajemen", 
+                    deadline: formatDateForInput(today), // Deadline hari ini
+                    status: "todo",
+                    created_at: new Date(2025, 11, 25).toISOString() // Dibuat kemarin
+                },
+                { 
+                    id: 2, 
+                    title: "Presentasi Hasil Proyek Q4", 
+                    description: "Persiapkan presentasi untuk rapat akhir tahun", 
+                    deadline: formatDateForInput(tomorrow), // Deadline besok
                     status: "inprogress",
-                    created_at: new Date().toISOString()
+                    created_at: new Date(2025, 11, 20).toISOString()
+                },
+                { 
+                    id: 3, 
+                    title: "Review Kode Fitur Baru", 
+                    description: "Melakukan code review untuk fitur authentication", 
+                    deadline: "2025-12-28", 
+                    status: "inprogress",
+                    created_at: new Date(2025, 11, 22).toISOString()
+                },
+                { 
+                    id: 4, 
+                    title: "Setup Server Production", 
+                    description: "Deploy aplikasi ke server production", 
+                    deadline: "2025-12-24", // Deadline 2 hari yang lalu (sudah lewat)
+                    status: "todo",
+                    created_at: new Date(2025, 11, 15).toISOString()
+                },
+                { 
+                    id: 5, 
+                    title: "Meeting Klien Akhir Tahun", 
+                    description: "Meeting evaluasi proyek dengan klien utama", 
+                    deadline: "2025-12-30", 
+                    status: "todo",
+                    created_at: new Date(2025, 11, 10).toISOString()
+                },
+                { 
+                    id: 6, 
+                    title: "Testing Aplikasi Mobile", 
+                    description: "Melakukan testing pada versi mobile aplikasi", 
+                    deadline: "2025-12-27", // Deadline besok lusa
+                    status: "inprogress",
+                    created_at: new Date(2025, 11, 23).toISOString()
                 }
             ],
             projects: [
                 { 
                     id: 1, 
-                    title: "Website Perusahaan", 
-                    description: "Redesign website perusahaan", 
-                    deadline: "2025-07-01",
-                    created_at: new Date().toISOString()
+                    title: "Website Perusahaan - Redesign", 
+                    description: "Redesign total website perusahaan dengan teknologi terbaru", 
+                    deadline: "2026-01-15",
+                    created_at: new Date(2025, 10, 1).toISOString()
+                },
+                { 
+                    id: 2, 
+                    title: "Aplikasi Mobile E-Commerce", 
+                    description: "Pengembangan aplikasi mobile untuk platform e-commerce", 
+                    deadline: "2026-02-28",
+                    created_at: new Date(2025, 11, 1).toISOString()
+                },
+                { 
+                    id: 3, 
+                    title: "Sistem Manajemen Inventori", 
+                    description: "Membangun sistem untuk manajemen inventori gudang", 
+                    deadline: "2026-01-31",
+                    created_at: new Date(2025, 10, 15).toISOString()
                 }
             ],
             activities: [
@@ -1683,14 +2474,101 @@ function initDemoData() {
                     type: 'login',
                     title: 'Akun demo diinisialisasi',
                     timestamp: new Date().toISOString()
+                },
+                {
+                    id: 2,
+                    type: 'task_added',
+                    title: 'Menambahkan tugas: Laporan Bulanan Desember 2025',
+                    timestamp: new Date(2025, 11, 25, 10, 30).toISOString()
+                },
+                {
+                    id: 3,
+                    type: 'task_added',
+                    title: 'Menambahkan tugas: Presentasi Hasil Proyek Q4',
+                    timestamp: new Date(2025, 11, 20, 14, 15).toISOString()
+                },
+                {
+                    id: 4,
+                    type: 'task_completed',
+                    title: 'Menyelesaikan tugas: Setup Database',
+                    timestamp: new Date(2025, 11, 24, 16, 45).toISOString()
+                },
+                {
+                    id: 5,
+                    type: 'project_added',
+                    title: 'Menambahkan proyek: Aplikasi Mobile E-Commerce',
+                    timestamp: new Date(2025, 11, 1, 9, 0).toISOString()
                 }
             ],
-            productivityStats: FlowSyncAPI.initializeProductivityStats(),
-            created_at: new Date().toISOString()
+            productivityStats: {
+                weekly: {
+                    tasksCompleted: 3,
+                    tasksCreated: 8,
+                    productivityScore: 38
+                },
+                monthly: {
+                    tasksCompleted: 8,
+                    tasksCreated: 15,
+                    productivityScore: 53
+                },
+                lastUpdated: new Date().toISOString()
+            },
+            created_at: new Date(2025, 11, 1).toISOString()
         };
 
         users.push(demoData);
         localStorage.setItem("flowsync_users", JSON.stringify(users));
+    }
+    
+    // Tambahkan juga user lain untuk testing
+    const testUser = users.find(u => u.username === "user123");
+    if (!testUser) {
+        const testData = {
+            id: 2,
+            username: "user123",
+            password: "password123",
+            name: "John Doe",
+            email: "john@example.com",
+            phone: "081234567890",
+            tasks: [
+                {
+                    id: 100,
+                    title: "Belajar JavaScript Advanced",
+                    description: "Mempelajari konsep advanced JavaScript",
+                    deadline: "2025-12-31",
+                    status: "inprogress",
+                    created_at: new Date(2025, 11, 20).toISOString()
+                }
+            ],
+            projects: [],
+            activities: [],
+            productivityStats: FlowSyncAPI.initializeProductivityStats(),
+            created_at: new Date().toISOString()
+        };
+        
+        users.push(testData);
+        localStorage.setItem("flowsync_users", JSON.stringify(users));
+    }
+}
+
+// ============ Check URL for Reset Token ============
+function checkResetTokenFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const resetToken = urlParams.get('reset_token');
+    
+    if (resetToken) {
+        // Verifikasi token
+        FlowSyncAPI.verifyResetToken(resetToken).then(result => {
+            if (result.success) {
+                // Tampilkan modal reset password
+                openResetPasswordModal(result.username, resetToken);
+                
+                // Hapus token dari URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } else {
+                showToast(result.message, "error");
+            }
+        });
     }
 }
 
@@ -1708,9 +2586,24 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btnDemo").onclick = demoLogin;
     document.getElementById("btnReg").onclick = handleRegister;
     document.getElementById("btnFillExample").onclick = fillExample;
+    
+    // Add new event listeners for forgot password
+    document.getElementById("showForgotPassword").onclick = (e) => {
+        e.preventDefault();
+        switchTab("forgot");
+    };
+    
+    document.getElementById("btnForgotPassword").onclick = handleForgotPassword;
+    document.getElementById("backToLogin").onclick = (e) => {
+        e.preventDefault();
+        switchTab("login");
+    };
 
     // Initialize password toggles
     initPasswordToggles();
+
+    // Initialize date inputs
+    initializeDateInputs();
 
     // Event listeners untuk Enter key
     document.addEventListener("keypress", (e) => {
@@ -1718,8 +2611,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const activeTab = document.querySelector('.tab.active').id;
             if (activeTab === 'tab-login') {
                 handleLogin();
-            } else {
+            } else if (activeTab === 'tab-reg') {
                 handleRegister();
+            } else if (activeTab === 'tab-forgot') {
+                handleForgotPassword();
             }
         }
     });
@@ -1749,7 +2644,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // Listen untuk visibility change (tab/window focus)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && currentUser) {
+            // Cek notifikasi ketika user kembali ke tab
+            setTimeout(() => {
+                NotificationManager.checkAllNotifications();
+            }, 1000);
+        }
+    });
+
     initDemoData();
+    
+    // Check for reset token in URL
+    checkResetTokenFromURL();
 
     if (currentUser) {
         renderApp();
