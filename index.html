@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#4f46e5">
 </head>
 <body>
   <header class="app-header">
@@ -39,7 +41,7 @@
         <div id="loginForm" class="form">
           <div class="input-group">
             <i class="fas fa-user"></i>
-            <input id="loginUser" class="input" placeholder="Username" />
+            <input id="loginUser" class="input" placeholder="Username atau Email" />
           </div>
           <div class="password-group">
             <i class="fas fa-lock"></i>
@@ -59,6 +61,12 @@
           <button class="btn" id="btnLogin">Login</button>
           <button class="btn-secondary" id="btnDemo">Masuk Sebagai Demo</button>
           <p id="loginMsg" class="msg"></p>
+          
+          <!-- Informasi sync -->
+          <div class="sync-info">
+            <i class="fas fa-sync-alt"></i>
+            <span>Akun tersinkronisasi antar perangkat</span>
+          </div>
         </div>
 
         <div id="regForm" class="form hidden">
@@ -84,6 +92,12 @@
           <button class="btn" id="btnReg">Register</button>
           <button class="btn-secondary" id="btnFillExample">Isi Contoh</button>
           <p id="regMsg" class="msg"></p>
+          
+          <!-- Informasi sync -->
+          <div class="sync-info">
+            <i class="fas fa-sync-alt"></i>
+            <span>Akun tersinkronisasi antar perangkat</span>
+          </div>
         </div>
 
         <div id="forgotPasswordForm" class="form hidden">
@@ -105,6 +119,9 @@
 
   <footer>
     <p>© 2025 FlowSync --- Flow Your Goals 💡</p>
+    <p class="sync-status" id="syncStatus">
+      <i class="fas fa-check-circle"></i> Data tersinkronisasi
+    </p>
   </footer>
 
   <!-- Toast Notification -->
@@ -116,6 +133,24 @@
       <div class="modal-header">
         <h3>Edit Profil</h3>
         <button class="modal-close" onclick="closeProfileModal()">&times;</button>
+      </div>
+      <div class="profile-image-container">
+        <div class="profile-image-preview" id="profileImagePreview">
+          <img id="profileImageDisplay" src="" alt="Profile Image">
+          <div class="profile-image-placeholder" id="profileImagePlaceholder">
+            <i class="fas fa-user"></i>
+          </div>
+        </div>
+        <div class="profile-image-buttons">
+          <button class="btn-secondary" onclick="openImagePicker()" style="flex: 1;">
+            <i class="fas fa-folder-open"></i> Pilih Gambar
+          </button>
+          <button class="btn-secondary" onclick="openCamera()" style="flex: 1;">
+            <i class="fas fa-camera"></i> Kamera
+          </button>
+        </div>
+        <input type="file" id="profileImageInput" accept="image/*" style="display: none;">
+        <input type="hidden" id="profileImageData">
       </div>
       <div class="input-group">
         <i class="fas fa-user"></i>

@@ -20,11 +20,11 @@
   --border: #e5e7eb;
   --card-bg: #ffffff;
   --sidebar-bg: #f8fafc;
-  --spacing-xs: 0.5rem;
-  --spacing-sm: 1rem;
-  --spacing-md: 1.5rem;
-  --spacing-lg: 2rem;
-  --spacing-xl: 3rem;
+  --spacing-xs: 0.75rem;  /* DIBESARKAN */
+  --spacing-sm: 1.25rem;  /* DIBESARKAN */
+  --spacing-md: 1.75rem;  /* DIBESARKAN */
+  --spacing-lg: 2.25rem;  /* DIBESARKAN */
+  --spacing-xl: 3rem;     /* DIBESARKAN */
 }
 
 /* Dark Theme */
@@ -45,7 +45,8 @@ body {
   display: flex;
   flex-direction: column;
   transition: all 0.3s ease;
-  line-height: 1.6;
+  line-height: 1.7; /* DIBESARKAN untuk readability */
+  font-size: 16px; /* BASE FONT SIZE DIBESARKAN */
 }
 
 [data-theme="dark"] body {
@@ -58,32 +59,36 @@ body {
   color: white;
   padding: var(--spacing-sm) var(--spacing-md);
   display: flex;
-  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 15px rgba(0,0,0,0.1);
   position: relative;
   z-index: 100;
+  flex-wrap: nowrap;
+  min-height: 70px;
 }
 
 .header-left {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  flex-shrink: 0;
 }
 
 .sidebar-toggle {
   background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+  width: 46px; /* DIBESARKAN */
+  height: 46px; /* DIBESARKAN */
+  border-radius: 10px; /* DIBESARKAN */
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
+  font-size: 1.1rem; /* DIBESARKAN */
+  flex-shrink: 0;
 }
 
 .sidebar-toggle:hover {
@@ -94,21 +99,25 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  flex-shrink: 0;
+  min-width: 120px;
 }
 
 .brand h1 {
-  font-size: 1.4rem;
-  margin-bottom: 0.2rem;
+  font-size: 1.5rem; /* DIBESARKAN */
+  margin-bottom: 0.3rem; /* DIBESARKAN */
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem; /* DIBESARKAN */
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .brand p { 
-  font-size: 0.85rem; 
+  font-size: 0.95rem;  /* DIBESARKAN */
   opacity: 0.9; 
   font-weight: 400;
+  white-space: nowrap;
 }
 
 nav#topNav { 
@@ -116,24 +125,25 @@ nav#topNav {
   gap: var(--spacing-sm); 
   align-items: center; 
   margin-left: auto;
-  margin-right: var(--spacing-md);
+  flex-shrink: 0;
 }
 
 .theme-toggle {
   background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
-  padding: 0.6rem;
-  border-radius: 8px;
+  padding: 0.7rem; /* DIBESARKAN */
+  border-radius: 10px; /* DIBESARKAN */
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   transition: all 0.3s ease;
-  font-size: 0.9rem;
-  min-width: 44px;
-  min-height: 44px;
+  font-size: 1rem; /* DIBESARKAN */
+  min-width: 48px; /* DIBESARKAN */
+  min-height: 48px; /* DIBESARKAN */
+  flex-shrink: 0;
 }
 
 .theme-toggle:hover {
@@ -141,15 +151,34 @@ nav#topNav {
   transform: translateY(-1px);
 }
 
-/* User Profile in Header */
+/* User Profile in Header - REVISI: Icon saja untuk mobile */
 .user-profile {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: center;
   cursor: pointer;
   padding: 0.5rem;
-  border-radius: 8px;
+  border-radius: 10px;
   transition: background 0.2s;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+
+/* Mobile: hanya icon user */
+.user-profile.mobile-view .user-info {
+  display: none;
+}
+
+.user-profile.mobile-view .user-avatar {
+  width: 40px;
+  height: 40px;
+  font-size: 1rem;
+}
+
+.user-profile.mobile-view .user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-profile:hover {
@@ -157,8 +186,8 @@ nav#topNav {
 }
 
 .user-avatar {
-  width: 36px;
-  height: 36px;
+  width: 42px; /* DIBESARKAN */
+  height: 42px; /* DIBESARKAN */
   background: #eef2ff;
   border-radius: 999px;
   display: flex;
@@ -166,7 +195,16 @@ nav#topNav {
   justify-content: center;
   font-weight: bold;
   color: var(--primary);
-  font-size: 1rem;
+  font-size: 1.1rem; /* DIBESARKAN */
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 [data-theme="dark"] .user-avatar {
@@ -177,16 +215,25 @@ nav#topNav {
 .user-info {
   display: flex;
   flex-direction: column;
+  margin-left: 0.5rem;
 }
 
 .user-name {
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: 0.95rem; /* DIBESARKAN */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
 }
 
 .user-username {
-  font-size: 0.75rem;
+  font-size: 0.8rem; /* DIBESARKAN */
   opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
 }
 
 .user-dropdown {
@@ -199,10 +246,10 @@ nav#topNav {
   right: 0;
   background: white;
   color: var(--dark);
-  border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  min-width: 180px;
-  padding: 0.5rem 0;
+  border-radius: 12px; /* DIBESARKAN */
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15); /* DIBESARKAN */
+  min-width: 200px; /* DIBESARKAN */
+  padding: 0.6rem 0; /* DIBESARKAN */
   z-index: 101;
   display: none;
 }
@@ -219,15 +266,16 @@ nav#topNav {
 .user-menu button {
   width: 100%;
   text-align: left;
-  padding: 0.7rem 1rem;
+  padding: 0.8rem 1.2rem; /* DIBESARKAN */
   border: none;
   background: none;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem; /* DIBESARKAN */
   transition: background 0.2s;
   color: var(--dark);
+  font-size: 0.9rem; /* DIBESARKAN */
 }
 
 .user-menu button:hover {
@@ -251,16 +299,35 @@ nav#topNav {
 .auth-card {
   background: var(--card-bg);
   padding: var(--spacing-lg);
-  border-radius: 16px;
-  box-shadow: 0 8px 25px rgba(79, 70, 229, 0.15);
-  width: 380px;
+  border-radius: 20px; /* DIBESARKAN */
+  box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2); /* DIBESARKAN */
+  width: 420px; /* DIBESARKAN */
   animation: fadeIn 0.5s ease;
 }
 
 .auth-card h2 { 
   margin-bottom: var(--spacing-md); 
   text-align: center; 
-  font-size: 1.5rem;
+  font-size: 1.6rem; /* DIBESARKAN */
+  font-weight: 600;
+}
+
+/* Sync Info Styling */
+.sync-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background: rgba(79, 70, 229, 0.08);
+  border-radius: 10px;
+  color: var(--primary);
+  font-size: 0.9rem;
+}
+
+.sync-info i {
+  color: var(--success);
 }
 
 /* ==================== PERBAIKAN TOMBOL LOGIN/REGISTER ==================== */
@@ -273,15 +340,15 @@ nav#topNav {
 
 .tab {
   flex: 1;
-  padding: 0.9rem 0.5rem;
-  border-radius: 10px;
+  padding: 1rem 0.5rem; /* DIBESARKAN */
+  border-radius: 12px; /* DIBESARKAN */
   border: 1px solid var(--border);
   background: #f3f4f6;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-size: 0.95rem;
+  font-size: 1rem; /* DIBESARKAN */
   font-weight: 500;
-  min-height: 48px;
+  min-height: 52px; /* DIBESARKAN */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -295,13 +362,13 @@ nav#topNav {
   background: var(--primary);
   color: white;
   border-color: transparent;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 3px 12px rgba(79, 70, 229, 0.4); /* DIBESARKAN */
   font-weight: 600;
 }
 
 .tab:hover:not(.active) {
   background: #e5e7eb;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 [data-theme="dark"] .tab:hover:not(.active) {
@@ -319,42 +386,30 @@ nav#topNav {
   margin-bottom: var(--spacing-sm);
 }
 
-/* PERBAIKAN: Label untuk input date */
-.input-group label {
-  display: block;
-  margin-bottom: 0.3rem;
-  color: var(--gray);
-  font-size: 0.8rem;
-  padding-left: 2.5rem;
-}
-
 /* PERBAIKAN UTAMA: Semua icon input di tengah vertikal */
 .input-group i {
   position: absolute;
-  left: 12px;
+  left: 14px; /* DIBESARKAN */
   top: 50%;
   transform: translateY(-50%); /* INI YANG BUAT DI TENGAH */
   color: var(--gray);
   z-index: 2;
-  width: 16px;
+  width: 18px; /* DIBESARKAN */
   text-align: center;
-}
-
-/* Khusus untuk input dengan label di atas (seperti date input) */
-.input-group.has-label i {
-  top: calc(50% + 0.4rem); /* Kompensasi untuk label */
+  font-size: 1.05rem; /* DIBESARKAN */
 }
 
 /* Input styling */
 .input {
   width: 100%;
-  padding: 0.8rem 0.8rem 0.8rem 2.5rem; /* Padding kiri untuk icon */
+  padding: 1rem 1rem 1rem 3rem; /* DIBESARKAN */
   border: 1px solid #c7d2fe;
-  border-radius: 10px;
+  border-radius: 12px; /* DIBESARKAN */
   background: #f9fafb;
   transition: border 0.2s;
-  font-size: 0.9rem;
+  font-size: 1rem; /* DIBESARKAN */
   position: relative;
+  line-height: 1.5;
 }
 
 [data-theme="dark"] .input {
@@ -367,6 +422,7 @@ nav#topNav {
   border-color: var(--primary-light); 
   outline: none; 
   background: white; 
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); /* DIBESARKAN */
 }
 
 [data-theme="dark"] .input:focus {
@@ -382,37 +438,39 @@ nav#topNav {
 }
 
 .password-group .input {
-  padding-right: 3.5rem;
-  padding-left: 2.5rem;
+  padding-right: 4rem; /* DIBESARKAN */
+  padding-left: 3rem; /* DIBESARKAN */
 }
 
 .password-group .fa-lock {
   position: absolute;
-  left: 12px;
+  left: 14px; /* DIBESARKAN */
   top: 50%;
   transform: translateY(-50%);
   color: var(--gray);
   z-index: 2;
+  font-size: 1.05rem; /* DIBESARKAN */
 }
 
 .password-toggle {
   position: absolute;
-  right: 12px;
+  right: 14px; /* DIBESARKAN */
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   color: var(--gray);
   cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 4px;
+  padding: 0.6rem; /* DIBESARKAN */
+  border-radius: 6px; /* DIBESARKAN */
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 38px; /* DIBESARKAN */
+  height: 38px; /* DIBESARKAN */
   z-index: 2;
+  font-size: 1.1rem; /* DIBESARKAN */
 }
 
 .password-toggle:hover {
@@ -431,33 +489,37 @@ nav#topNav {
 
 .btn, .btn-secondary {
   width: 100%;
-  padding: 0.8rem;
+  padding: 1rem; /* DIBESARKAN */
   border: none;
-  border-radius: 10px;
+  border-radius: 12px; /* DIBESARKAN */
   cursor: pointer;
   font-weight: 500;
   transition: all 0.25s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
+  gap: 0.6rem; /* DIBESARKAN */
+  font-size: 1rem; /* DIBESARKAN */
   margin-bottom: var(--spacing-xs);
+  min-height: 52px; /* DIBESARKAN */
 }
 
 .btn {
   background: linear-gradient(90deg, var(--primary), var(--primary-light));
   color: white;
+  font-weight: 600;
 }
 
 .btn:hover { 
   opacity: 0.9; 
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); 
+  box-shadow: 0 6px 15px rgba(79, 70, 229, 0.3); 
+  transform: translateY(-2px);
 }
 
 .btn-secondary {
   background: #f3f4f6;
   color: #374151;
+  font-weight: 500;
 }
 
 [data-theme="dark"] .btn-secondary {
@@ -467,6 +529,7 @@ nav#topNav {
 
 .btn-secondary:hover { 
   background: #e5e7eb; 
+  transform: translateY(-2px);
 }
 
 [data-theme="dark"] .btn-secondary:hover {
@@ -474,10 +537,13 @@ nav#topNav {
 }
 
 .msg { 
-  font-size: 0.8rem; 
+  font-size: 0.9rem; /* DIBESARKAN */
   color: var(--danger); 
   text-align: center; 
   margin-top: var(--spacing-xs);
+  padding: 0.5rem;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.05);
 }
 
 /* Style untuk link "Lupa Password?" */
@@ -487,8 +553,9 @@ nav#topNav {
   transition: color 0.2s;
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.85rem;
+  gap: 0.4rem; /* DIBESARKAN */
+  font-size: 0.95rem; /* DIBESARKAN */
+  font-weight: 500;
 }
 
 #showForgotPassword:hover {
@@ -503,8 +570,9 @@ nav#topNav {
   transition: color 0.2s;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
+  gap: 0.6rem; /* DIBESARKAN */
+  font-size: 0.95rem; /* DIBESARKAN */
+  font-weight: 500;
 }
 
 #backToLogin:hover {
@@ -516,32 +584,60 @@ nav#topNav {
 .card {
   background: var(--card-bg);
   padding: var(--spacing-lg);
-  border-radius: 14px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  border-radius: 18px; /* DIBESARKAN */
+  box-shadow: 0 6px 25px rgba(0,0,0,0.08); /* DIBESARKAN */
   margin-bottom: var(--spacing-md);
-  transition: transform 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s;
   position: relative;
   overflow: hidden;
+  border-left: 6px solid var(--primary); /* Garis biru di kiri */
 }
 
 .card:hover { 
-  transform: translateY(-2px); 
-  box-shadow: 0 6px 25px rgba(0,0,0,0.08); 
+  transform: translateY(-3px); 
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12); 
 }
 
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 5px;
-  height: 100%;
-  background: linear-gradient(to bottom, var(--primary), var(--primary-light));
+/* Card untuk tugas dengan garis yang berbeda */
+.task-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  cursor: grab;
+  transition: all 0.2s;
+  position: relative;
+  border-left: 6px solid var(--primary); /* Garis biru untuk tugas */
+}
+
+.task-card.todo {
+  border-left-color: var(--gray);
+}
+
+.task-card.inprogress {
+  border-left-color: var(--warning);
+}
+
+.task-card.done {
+  border-left-color: var(--success);
+}
+
+.task-card:hover {
+  box-shadow: 0 6px 15px rgba(99,102,241,0.2);
+  transform: translateY(-3px);
+}
+
+.task-card:active { cursor: grabbing; }
+
+.task-card.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg);
 }
 
 .app-grid {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 300px 1fr; /* DIBESARKAN */
   gap: var(--spacing-md);
   padding: var(--spacing-md);
   transition: grid-template-columns 0.3s ease;
@@ -554,9 +650,9 @@ nav#topNav {
 
 .sidebar {
   background: var(--sidebar-bg);
-  border-radius: 14px;
+  border-radius: 18px; /* DIBESARKAN */
   padding: var(--spacing-lg);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  box-shadow: 0 6px 25px rgba(0,0,0,0.08); /* DIBESARKAN */
   height: fit-content;
   position: sticky;
   top: var(--spacing-md);
@@ -570,9 +666,26 @@ nav#topNav {
   opacity: 0;
 }
 
+/* MODIFIKASI 1: Sidebar Menu Aktif */
+.sidebar .btn-secondary.active {
+  background: var(--primary) !important;
+  color: white !important;
+  border-color: transparent !important;
+  box-shadow: 0 3px 12px rgba(79, 70, 229, 0.4) !important;
+  font-weight: 600 !important;
+}
+
+.sidebar .btn-secondary.active i {
+  color: white !important;
+}
+
+.sidebar .btn-secondary.active:hover {
+  background: var(--primary-light) !important;
+}
+
 .avatar {
-  width: 48px;
-  height: 48px;
+  width: 54px; /* DIBESARKAN */
+  height: 54px; /* DIBESARKAN */
   background: #eef2ff;
   border-radius: 999px;
   display: flex;
@@ -580,7 +693,16 @@ nav#topNav {
   justify-content: center;
   font-weight: bold;
   color: var(--primary);
-  font-size: 1.2rem;
+  font-size: 1.3rem; /* DIBESARKAN */
+  overflow: hidden;
+  border: 2px solid rgba(79, 70, 229, 0.3);
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 [data-theme="dark"] .avatar {
@@ -591,7 +713,7 @@ nav#topNav {
 .profile {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.9rem; /* DIBESARKAN */
   margin-bottom: var(--spacing-md);
   padding-bottom: var(--spacing-sm);
   border-bottom: 1px solid var(--border);
@@ -601,30 +723,30 @@ nav#topNav {
 .quick {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  margin-bottom: 1.5rem;
+  gap: 0.5rem; /* DIBESARKAN */
+  margin-bottom: 1.8rem; /* DIBESARKAN */
 }
 
 .quick button {
   width: 100%;
   text-align: left;
-  padding: 0.7rem 0.8rem;
-  border-radius: 10px;
+  padding: 0.9rem 1rem; /* DIBESARKAN */
+  border-radius: 12px; /* DIBESARKAN */
   transition: all 0.2s ease;
   background: var(--card-bg);
   border: 1px solid var(--border);
   color: var(--dark);
-  font-size: 0.85rem;
+  font-size: 0.95rem; /* DIBESARKAN */
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.8rem; /* DIBESARKAN */
   cursor: pointer;
 }
 
 .quick button:hover {
   background: #f3f4f6;
-  transform: translateX(4px);
+  transform: translateX(5px);
   border-color: var(--primary-light);
   color: var(--primary);
 }
@@ -635,9 +757,9 @@ nav#topNav {
 }
 
 .quick button i {
-  width: 18px;
+  width: 20px; /* DIBESARKAN */
   text-align: center;
-  font-size: 0.9rem;
+  font-size: 1rem; /* DIBESARKAN */
   transition: transform 0.2s ease;
 }
 
@@ -657,39 +779,39 @@ nav#topNav {
   margin-bottom: var(--spacing-sm); 
   display: flex; 
   align-items: center; 
-  gap: 0.5rem; 
+  gap: 0.6rem; /* DIBESARKAN */
   color: var(--primary); 
-  font-size: 0.95rem;
+  font-size: 1.05rem; /* DIBESARKAN */
   font-weight: 600;
 }
 
 .activity-item {
-  padding: 0.7rem 0;
+  padding: 0.9rem 0; /* DIBESARKAN */
   border-bottom: 1px dashed var(--border);
-  font-size: 0.8rem;
+  font-size: 0.9rem; /* DIBESARKAN */
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: 0.6rem; /* DIBESARKAN */
   transition: all 0.2s ease;
 }
 
 .activity-item:hover {
   background: var(--card-bg);
-  margin: 0 -0.5rem;
-  padding: 0.7rem 0.5rem;
-  border-radius: 8px;
+  margin: 0 -0.6rem; /* DIBESARKAN */
+  padding: 0.9rem 0.6rem; /* DIBESARKAN */
+  border-radius: 10px; /* DIBESARKAN */
 }
 
 .activity-item:last-child { border-bottom: none; }
 
 .activity-icon {
-  width: 22px;
-  height: 22px;
+  width: 26px; /* DIBESARKAN */
+  height: 26px; /* DIBESARKAN */
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.6rem;
+  font-size: 0.8rem; /* DIBESARKAN */
   flex-shrink: 0;
   background: #eef2ff;
   color: var(--primary);
@@ -707,13 +829,13 @@ nav#topNav {
 .activity-title {
   font-weight: 500;
   color: var(--dark);
-  margin-bottom: 0.15rem;
-  font-size: 0.75rem;
-  line-height: 1.3;
+  margin-bottom: 0.2rem; /* DIBESARKAN */
+  font-size: 0.85rem; /* DIBESARKAN */
+  line-height: 1.4;
 }
 
 .activity-time {
-  font-size: 0.65rem;
+  font-size: 0.75rem; /* DIBESARKAN */
   color: var(--gray);
 }
 
@@ -727,11 +849,11 @@ nav#topNav {
 
 .kanban-column {
   flex: 1;
-  min-width: 280px;
+  min-width: 300px; /* DIBESARKAN */
   background: #f9fafb;
-  border-radius: 12px;
+  border-radius: 16px; /* DIBESARKAN */
   padding: var(--spacing-md);
-  box-shadow: inset 0 0 6px rgba(0,0,0,0.03);
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.05); /* DIBESARKAN */
   transition: all 0.3s;
 }
 
@@ -740,50 +862,27 @@ nav#topNav {
 }
 
 .kanban-column:hover {
-  box-shadow: inset 0 0 6px rgba(79, 70, 229, 0.1);
+  box-shadow: inset 0 0 8px rgba(79, 70, 229, 0.15); /* DIBESARKAN */
 }
 
 .kanban-column h3 {
   margin-bottom: var(--spacing-md);
   padding-bottom: var(--spacing-xs);
-  border-bottom: 2px solid var(--border);
+  border-bottom: 3px solid var(--border); /* DIBESARKAN */
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 1.1rem;
+  font-size: 1.2rem; /* DIBESARKAN */
 }
 
 .kanban-column.todo h3 { color: var(--gray); }
 .kanban-column.inprogress h3 { color: var(--warning); }
 .kanban-column.done h3 { color: var(--success); }
 
-.task-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: var(--spacing-sm);
-  margin-bottom: var(--spacing-sm);
-  cursor: grab;
-  transition: all 0.2s;
-  position: relative;
-}
-
-.task-card:hover {
-  box-shadow: 0 4px 10px rgba(99,102,241,0.15);
-  transform: translateY(-2px);
-}
-
-.task-card:active { cursor: grabbing; }
-
-.task-card.dragging {
-  opacity: 0.5;
-  transform: rotate(5deg);
-}
-
 /* ------------------ Progress Circle ------------------ */
 .progress-circle {
-  width: 120px;
-  height: 120px;
+  width: 140px; /* DIBESARKAN */
+  height: 140px; /* DIBESARKAN */
   border-radius: 999px;
   background: conic-gradient(var(--primary-light) var(--deg), #e0e7ff 0deg);
   display: flex;
@@ -798,8 +897,8 @@ nav#topNav {
 .progress-circle::before {
   content: '';
   position: absolute;
-  width: 100px;
-  height: 100px;
+  width: 120px; /* DIBESARKAN */
+  height: 120px; /* DIBESARKAN */
   background: var(--card-bg);
   border-radius: 50%;
 }
@@ -807,32 +906,33 @@ nav#topNav {
 .progress-circle span {
   position: relative;
   z-index: 1;
-  font-size: 1.2rem;
+  font-size: 1.4rem; /* DIBESARKAN */
 }
 
 /* ------------------ Stats ------------------ */
 .stats-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* DIBESARKAN */
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
 }
 
 .stat-card {
   background: var(--card-bg);
-  border-radius: 12px;
+  border-radius: 16px; /* DIBESARKAN */
   padding: var(--spacing-lg);
   text-align: center;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.08); /* DIBESARKAN */
   transition: transform 0.2s;
 }
 
 .stat-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12); /* DIBESARKAN */
 }
 
 .stat-card i {
-  font-size: 2rem;
+  font-size: 2.5rem; /* DIBESARKAN */
   margin-bottom: var(--spacing-xs);
 }
 
@@ -842,13 +942,15 @@ nav#topNav {
 .stat-card.total i { color: var(--primary); }
 
 .stat-card h3 {
-  font-size: 2rem;
+  font-size: 2.2rem; /* DIBESARKAN */
   margin: var(--spacing-xs) 0;
+  font-weight: 700;
 }
 
 .stat-card p {
   color: var(--gray);
-  font-size: 0.9rem;
+  font-size: 1rem; /* DIBESARKAN */
+  font-weight: 500;
 }
 
 /* ------------------ Dashboard Grid ------------------ */
@@ -862,10 +964,36 @@ nav#topNav {
   margin-bottom: 0;
 }
 
-/* ------------------ Footer ------------------ */
+/* MODIFIKASI 2: Dashboard tugas terbaru - semua garis biru */
+.dashboard-task-item {
+  padding: 1rem 0; /* DIBESARKAN */
+  border-bottom: 1px solid var(--border);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.dashboard-task-item:hover {
+  background: var(--card-bg);
+  padding: 1rem;
+  border-radius: 12px; /* DIBESARKAN */
+}
+
+/* MODIFIKASI 3: Garis samping kiri selalu biru untuk dashboard */
+.dashboard-task-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  background: var(--primary); /* SELALU BIRU */
+  border-radius: 3px 0 0 3px;
+}
+
+/* Footer */
 footer {
   text-align: center;
-  font-size: 0.85rem;
+  font-size: 0.95rem; /* DIBESARKAN */
   color: var(--gray);
   background: var(--card-bg);
   padding: var(--spacing-sm);
@@ -873,20 +1001,36 @@ footer {
   margin-top: auto;
 }
 
+.sync-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--success);
+}
+
+.sync-status i {
+  font-size: 0.9rem;
+}
+
 /* ------------------ Toast Notification ------------------ */
 .toast {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  padding: 12px 20px;
+  bottom: 25px; /* DIBESARKAN */
+  right: 25px; /* DIBESARKAN */
+  padding: 1rem 1.5rem; /* DIBESARKAN */
   background: var(--primary);
   color: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border-radius: 12px; /* DIBESARKAN */
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2); /* DIBESARKAN */
   z-index: 1000;
   transform: translateY(100px);
   opacity: 0;
   transition: all 0.3s ease;
+  font-size: 1rem; /* DIBESARKAN */
+  max-width: 350px;
 }
 
 .toast.show {
@@ -896,12 +1040,12 @@ footer {
 
 /* ------------------ Animation ------------------ */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(15px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideIn {
-  from { transform: translateX(-20px); opacity: 0; }
+  from { transform: translateX(-25px); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
 
@@ -913,24 +1057,24 @@ footer {
 
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+  50% { transform: translateY(-12px); }
 }
 
 /* ------------------ Auth Illustration ------------------ */
 .auth-image img {
-  width: 400px;
+  width: 450px; /* DIBESARKAN */
   max-width: 90%;
   animation: float 3s ease-in-out infinite;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  border-radius: 16px; /* DIBESARKAN */
+  box-shadow: 0 12px 35px rgba(0,0,0,0.15); /* DIBESARKAN */
 }
 
 /* ------------------ Status Badges ------------------ */
 .status-badge {
-  padding: 0.4rem 1rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
+  padding: 0.5rem 1.2rem; /* DIBESARKAN */
+  border-radius: 25px; /* DIBESARKAN */
+  font-size: 0.9rem; /* DIBESARKAN */
+  font-weight: 600;
   display: inline-block;
 }
 
@@ -958,13 +1102,14 @@ footer {
 }
 
 .filter-btn {
-  padding: 0.6rem 1.2rem;
+  padding: 0.8rem 1.5rem; /* DIBESARKAN */
   border: 1px solid var(--border);
   background: var(--card-bg);
-  border-radius: 8px;
+  border-radius: 10px; /* DIBESARKAN */
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 0.9rem;
+  font-size: 1rem; /* DIBESARKAN */
+  font-weight: 500;
 }
 
 .filter-btn.active {
@@ -975,6 +1120,7 @@ footer {
 
 .filter-btn:hover {
   background: #f3f4f6;
+  transform: translateY(-2px);
 }
 
 [data-theme="dark"] .filter-btn:hover {
@@ -992,31 +1138,32 @@ footer {
   margin-bottom: var(--spacing-lg);
   background: var(--card-bg);
   padding: var(--spacing-sm);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: 16px; /* DIBESARKAN */
+  box-shadow: 0 3px 12px rgba(0,0,0,0.08); /* DIBESARKAN */
 }
 
 .task-status-tab {
   flex: 1;
   padding: var(--spacing-sm);
   border: none;
-  border-radius: 8px;
+  border-radius: 10px; /* DIBESARKAN */
   cursor: pointer;
   transition: all 0.3s ease;
-  font-weight: 500;
-  font-size: 0.9rem;
+  font-weight: 600;
+  font-size: 1rem; /* DIBESARKAN */
   background: transparent;
   color: var(--gray);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.6rem; /* DIBESARKAN */
+  min-height: 50px;
 }
 
 .task-status-tab.active {
   background: var(--primary);
   color: white;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 3px 12px rgba(79, 70, 229, 0.4); /* DIBESARKAN */
 }
 
 .task-status-tab.todo.active { background: var(--gray); }
@@ -1027,22 +1174,22 @@ footer {
 .task-action-buttons {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-left: 1rem;
+  gap: 0.6rem; /* DIBESARKAN */
+  margin-left: 1.2rem; /* DIBESARKAN */
 }
 
 .edit-btn, .delete-btn {
-  padding: 0.6rem 1rem;
+  padding: 0.7rem 1.2rem; /* DIBESARKAN */
   border: none;
-  border-radius: 8px;
+  border-radius: 10px; /* DIBESARKAN */
   cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 500;
+  font-size: 0.9rem; /* DIBESARKAN */
+  font-weight: 600;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  min-width: 80px;
+  gap: 0.6rem; /* DIBESARKAN */
+  min-width: 90px; /* DIBESARKAN */
   justify-content: center;
 }
 
@@ -1053,7 +1200,8 @@ footer {
 
 .edit-btn:hover {
   background: #0891b2;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(6, 182, 212, 0.3);
 }
 
 .delete-btn {
@@ -1063,35 +1211,37 @@ footer {
 
 .delete-btn:hover {
   background: #dc2626;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
 }
 
 /* ------------------ Task Status Buttons ------------------ */
 .task-status-buttons {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.6rem; /* DIBESARKAN */
   flex-wrap: wrap;
-  margin-top: 0.5rem;
+  margin-top: 0.8rem; /* DIBESARKAN */
 }
 
 .status-btn {
-  padding: 0.5rem 0.8rem;
+  padding: 0.6rem 1rem; /* DIBESARKAN */
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px; /* DIBESARKAN */
   cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 0.85rem; /* DIBESARKAN */
+  font-weight: 600;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.4rem; /* DIBESARKAN */
   background: var(--card-bg);
   color: var(--dark);
+  min-height: 42px;
 }
 
 .status-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
 }
 
 .status-btn.active {
@@ -1138,6 +1288,7 @@ footer {
   z-index: 1000;
   align-items: center;
   justify-content: center;
+  padding: 1rem;
 }
 
 .modal.show {
@@ -1146,13 +1297,13 @@ footer {
 
 .modal-content {
   background: var(--card-bg);
-  border-radius: 12px;
+  border-radius: 20px; /* DIBESARKAN */
   padding: var(--spacing-lg);
   width: 90%;
-  max-width: 500px;
+  max-width: 550px; /* DIBESARKAN */
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.25); /* DIBESARKAN */
   animation: fadeIn 0.3s ease;
 }
 
@@ -1163,12 +1314,85 @@ footer {
   margin-bottom: var(--spacing-md);
 }
 
+.modal-header h3 {
+  font-size: 1.4rem; /* DIBESARKAN */
+  font-weight: 600;
+}
+
 .modal-close {
   background: none;
   border: none;
-  font-size: 1.2rem;
+  font-size: 1.5rem; /* DIBESARKAN */
   cursor: pointer;
   color: var(--gray);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.modal-close:hover {
+  background: #f3f4f6;
+}
+
+/* ------------------ Profile Image Styles ------------------ */
+.profile-image-container {
+  text-align: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.profile-image-preview {
+  width: 150px;
+  height: 150px;
+  margin: 0 auto var(--spacing-sm);
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  border: 4px solid var(--primary-light);
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+}
+
+.profile-image-preview img.active {
+  display: block;
+}
+
+.profile-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef2ff;
+  color: var(--primary);
+  font-size: 3rem;
+}
+
+.profile-image-placeholder.hidden {
+  display: none;
+}
+
+.profile-image-buttons {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.profile-image-buttons .btn-secondary {
+  padding: 0.8rem;
+  font-size: 0.9rem;
 }
 
 .hidden {
@@ -1178,21 +1402,22 @@ footer {
 /* ------------------ Productivity Report Styles ------------------ */
 .report-period-selector {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.6rem; /* DIBESARKAN */
   margin-bottom: var(--spacing-md);
   flex-wrap: wrap;
 }
 
 .period-btn {
-  padding: 0.6rem 1rem;
+  padding: 0.8rem 1.2rem; /* DIBESARKAN */
   border: 1px solid var(--border);
   background: var(--card-bg);
-  border-radius: 8px;
+  border-radius: 10px; /* DIBESARKAN */
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 0.85rem;
+  font-size: 0.95rem; /* DIBESARKAN */
   flex: 1;
-  min-width: 100px;
+  min-width: 120px; /* DIBESARKAN */
+  font-weight: 500;
 }
 
 .period-btn.active {
@@ -1204,11 +1429,12 @@ footer {
 .report-content {
   max-height: 60vh;
   overflow-y: auto;
+  padding-right: 0.5rem;
 }
 
 .report-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* DIBESARKAN */
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
 }
@@ -1216,54 +1442,63 @@ footer {
 .report-stat {
   background: var(--card-bg);
   padding: var(--spacing-sm);
-  border-radius: 8px;
+  border-radius: 12px; /* DIBESARKAN */
   text-align: center;
-  border-left: 4px solid var(--primary);
+  border-left: 5px solid var(--primary); /* DIBESARKAN */
+  transition: transform 0.2s;
+}
+
+.report-stat:hover {
+  transform: translateY(-2px);
 }
 
 .report-stat h4 {
-  font-size: 1.5rem;
-  margin-bottom: 0.25rem;
+  font-size: 1.8rem; /* DIBESARKAN */
+  margin-bottom: 0.3rem; /* DIBESARKAN */
   color: var(--primary);
+  font-weight: 700;
 }
 
 .report-stat p {
-  font-size: 0.8rem;
+  font-size: 0.95rem; /* DIBESARKAN */
   color: var(--gray);
+  font-weight: 500;
 }
 
 .productivity-chart {
   background: var(--card-bg);
   padding: var(--spacing-md);
-  border-radius: 8px;
+  border-radius: 12px; /* DIBESARKAN */
   margin-bottom: var(--spacing-md);
+  border: 1px solid var(--border);
 }
 
 .chart-bar {
   display: flex;
   align-items: center;
-  margin-bottom: 0.75rem;
-  gap: 0.75rem;
+  margin-bottom: 1rem; /* DIBESARKAN */
+  gap: 0.9rem; /* DIBESARKAN */
 }
 
 .chart-label {
-  min-width: 80px;
-  font-size: 0.8rem;
+  min-width: 100px; /* DIBESARKAN */
+  font-size: 0.95rem; /* DIBESARKAN */
   color: var(--gray);
+  font-weight: 500;
 }
 
 .chart-bar-inner {
   flex: 1;
-  height: 24px;
+  height: 28px; /* DIBESARKAN */
   background: #f3f4f6;
-  border-radius: 12px;
+  border-radius: 14px; /* DIBESARKAN */
   overflow: hidden;
   position: relative;
 }
 
 .chart-bar-fill {
   height: 100%;
-  border-radius: 12px;
+  border-radius: 14px; /* DIBESARKAN */
   transition: width 0.5s ease;
   position: relative;
 }
@@ -1273,10 +1508,10 @@ footer {
 .chart-bar-fill.done { background: var(--success); }
 
 .chart-value {
-  min-width: 40px;
+  min-width: 50px; /* DIBESARKAN */
   text-align: right;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.95rem; /* DIBESARKAN */
+  font-weight: 700;
 }
 
 .report-tasks {
@@ -1284,11 +1519,17 @@ footer {
 }
 
 .report-task-item {
-  padding: 0.75rem;
+  padding: 1rem; /* DIBESARKAN */
   border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: background 0.2s;
+}
+
+.report-task-item:hover {
+  background: var(--card-bg);
+  border-radius: 8px;
 }
 
 .report-task-item:last-child {
@@ -1300,26 +1541,27 @@ footer {
 }
 
 .report-task-title {
-  font-weight: 500;
-  margin-bottom: 0.25rem;
+  font-weight: 600;
+  margin-bottom: 0.3rem; /* DIBESARKAN */
+  font-size: 1rem;
 }
 
 .report-task-meta {
-  font-size: 0.75rem;
+  font-size: 0.85rem; /* DIBESARKAN */
   color: var(--gray);
   display: flex;
-  gap: 1rem;
+  gap: 1.2rem; /* DIBESARKAN */
 }
 
 /* ------------------ Notification Icon ------------------ */
 .notification-icon {
-  width: 40px;
-  height: 40px;
+  width: 46px; /* DIBESARKAN */
+  height: 46px; /* DIBESARKAN */
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 1.2rem; /* DIBESARKAN */
   flex-shrink: 0;
 }
 
@@ -1327,67 +1569,92 @@ footer {
 .deadline-warning {
   background: linear-gradient(90deg, var(--warning), #fbbf24);
   color: white;
-  padding: 1rem;
-  border-radius: 12px;
-  margin-bottom: 1rem;
+  padding: 1.2rem; /* DIBESARKAN */
+  border-radius: 16px; /* DIBESARKAN */
+  margin-bottom: 1.2rem; /* DIBESARKAN */
   animation: pulse 2s infinite;
+  font-size: 1rem; /* DIBESARKAN */
 }
 
 /* ------------------ Overdue Notification ------------------ */
 .overdue-notification {
-  border-left: 4px solid var(--danger);
+  border-left: 5px solid var(--danger); /* DIBESARKAN */
   animation: pulse 2s infinite;
-  background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, transparent 100%);
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, transparent 100%);
 }
 
 /* ------------------ Task Items ------------------ */
 .task-item {
-  padding: 0.8rem 0;
+  padding: 1rem 0; /* DIBESARKAN */
   border-bottom: 1px solid var(--border);
   transition: all 0.2s ease;
+  position: relative;
 }
 
 .task-item:hover {
   background: var(--card-bg);
-  padding: 0.8rem;
-  border-radius: 8px;
+  padding: 1rem;
+  border-radius: 12px; /* DIBESARKAN */
+}
+
+.task-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px 0 0 3px;
 }
 
 .overdue-task {
-  border-left: 4px solid var(--danger);
-  padding-left: 0.8rem;
-  background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, transparent 100%);
+  border-left: 5px solid var(--danger); /* DIBESARKAN */
+  padding-left: 1rem; /* DIBESARKAN */
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, transparent 100%);
 }
 
 .due-today-task {
-  border-left: 4px solid var(--warning);
-  padding-left: 0.8rem;
-  background: linear-gradient(90deg, rgba(245, 158, 11, 0.05) 0%, transparent 100%);
+  border-left: 5px solid var(--warning); /* DIBESARKAN */
+  padding-left: 1rem; /* DIBESARKAN */
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, transparent 100%);
 }
 
 .due-soon-task {
-  border-left: 4px solid var(--info);
-  padding-left: 0.8rem;
-  background: linear-gradient(90deg, rgba(6, 182, 212, 0.05) 0%, transparent 100%);
+  border-left: 5px solid var(--info); /* DIBESARKAN */
+  padding-left: 1rem; /* DIBESARKAN */
+  background: linear-gradient(90deg, rgba(6, 182, 212, 0.08) 0%, transparent 100%);
 }
 
 /* ------------------ Project Items ------------------ */
 .project-item {
-  padding: 0.8rem 0;
+  padding: 1rem 0; /* DIBESARKAN */
   border-bottom: 1px solid var(--border);
   transition: all 0.2s ease;
+  position: relative;
 }
 
 .project-item:hover {
   background: var(--card-bg);
-  padding: 0.8rem;
-  border-radius: 8px;
+  padding: 1rem;
+  border-radius: 12px; /* DIBESARKAN */
+}
+
+.project-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px 0 0 3px;
 }
 
 /* ------------------ Motivation Card ------------------ */
 .motivation-card {
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(99, 102, 241, 0.05) 100%);
-  border: 1px solid rgba(79, 70, 229, 0.1);
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%);
+  border: 1px solid rgba(79, 70, 229, 0.15);
   animation: fadeInUp 0.5s ease;
 }
 
@@ -1408,9 +1675,9 @@ footer {
   opacity: 0.6;
   transition: opacity 0.2s;
   position: absolute;
-  right: 12px;
-  width: 20px;
-  height: 20px;
+  right: 14px; /* DIBESARKAN */
+  width: 22px; /* DIBESARKAN */
+  height: 22px; /* DIBESARKAN */
   top: 50%;
   transform: translateY(-50%);
 }
@@ -1436,133 +1703,48 @@ footer {
 
 /* ==================== MOBILE ENHANCEMENTS - REVISI ==================== */
 
-@media (max-width: 768px) {
-  /* ------------------ Global Mobile Improvements ------------------ */
-  body {
-    font-size: 13px;
-    line-height: 1.4;
-  }
-
+@media (max-width: 992px) {
   .app-header {
-    padding: 0.6rem 0.8rem;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    background: linear-gradient(90deg, var(--primary), var(--primary-light)) !important;
+    padding: 0.8rem 1rem;
+    min-height: 60px;
   }
-
-  .header-left {
-    gap: 0.6rem;
-    flex: 1;
-  }
-
-  .brand {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    min-width: 0;
-  }
-
+  
   .brand h1 {
-    font-size: 1rem;
-    margin-bottom: 0.1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 1.2rem;
   }
-
+  
   .brand p {
-    font-size: 0.65rem;
-    opacity: 0.9;
-    display: block !important;
-    white-space: nowrap;
-  }
-
-  .sidebar-toggle {
-    width: 34px;
-    height: 34px;
-    flex-shrink: 0;
-    font-size: 0.9rem;
-  }
-
-  /* ------------------ Improved Navigation ------------------ */
-  nav#topNav {
-    margin: 0;
-    gap: 0.4rem;
-  }
-
-  .theme-toggle {
-    padding: 0.5rem;
-    min-width: 40px;
-    min-height: 40px;
-    border-radius: 8px;
-    font-size: 0.75rem;
-  }
-
-  .theme-toggle span {
-    display: none;
-  }
-
-  .user-profile {
-    padding: 0.3rem;
-    min-height: 40px;
-  }
-
-  .user-avatar {
-    width: 30px;
-    height: 30px;
     font-size: 0.8rem;
-  }
-
-  .user-info {
     display: none;
   }
-
-  /* ------------------ Improved Sidebar Mobile ------------------ */
+  
   .app-grid {
     grid-template-columns: 1fr;
-    padding: 0.6rem;
-    gap: 0.8rem;
-    min-height: calc(100vh - 70px);
+    padding: 1rem;
+    gap: 1rem;
   }
-
+  
   .sidebar {
     position: fixed;
     top: 0;
     left: -100%;
     width: 85%;
-    max-width: 280px;
+    max-width: 320px;
     height: 100vh;
     z-index: 1001;
     border-radius: 0;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow-y: auto;
-    box-shadow: 2px 0 20px rgba(0,0,0,0.15);
-    padding: 1.2rem 0.8rem;
-    background: var(--sidebar-bg);
+    box-shadow: 2px 0 25px rgba(0,0,0,0.2);
+    padding: 1.5rem 1rem;
   }
-
+  
   .sidebar.mobile-open {
     left: 0;
-    animation: slideInRight 0.3s ease-out;
   }
-
-  @keyframes slideInRight {
-    from {
-      transform: translateX(-100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  /* Sidebar Overlay */
+  
   .sidebar-overlay {
+    display: none;
     position: fixed;
     top: 0;
     left: 0;
@@ -1570,623 +1752,217 @@ footer {
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
     z-index: 1000;
-    display: none;
-    animation: fadeIn 0.3s ease;
   }
-
+  
   .sidebar-overlay.active {
     display: block;
   }
-
-  /* Sidebar Profile Mobile */
-  .sidebar .profile {
-    padding: 0.8rem 0;
-    margin-bottom: 1.2rem;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .sidebar .avatar {
-    width: 40px;
-    height: 40px;
-    font-size: 1rem;
-  }
-
-  /* Sidebar Menu Items Mobile - REVISI: Lebih kecil */
-  .quick {
-    margin-bottom: 1.2rem;
-    gap: 0.3rem;
-  }
-
-  .quick button {
-    padding: 0.7rem 0.8rem;
-    margin-bottom: 0.3rem;
-    border-radius: 10px;
-    font-size: 0.78rem;
-    border: 1px solid var(--border);
-    background: var(--card-bg);
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    width: 100%;
-    text-align: left;
-  }
-
-  .quick button:hover {
-    transform: translateX(6px);
-    background: var(--primary-light);
-    color: white;
-    border-color: var(--primary-light);
-  }
-
-  .quick button i {
-    width: 18px;
-    text-align: center;
-    font-size: 0.85rem;
-  }
-
-  /* ------------------ Improved Main Content ------------------ */
-  #view {
-    min-height: calc(100vh - 100px);
-    padding-bottom: 1.5rem;
-  }
-
-  .card {
-    padding: 1rem;
-    border-radius: 14px;
-    margin-bottom: 0.8rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.07);
-  }
-
-  .card::before {
-    width: 5px;
-  }
-
-  /* ------------------ Improved Stats Cards - Mobile ------------------ */
-  .stats-container {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.6rem;
-    margin-bottom: 1.2rem;
-  }
-
-  .stat-card {
-    padding: 1rem 0.6rem;
-    border-radius: 12px;
-    text-align: center;
-    min-height: 100px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  .stat-card i {
-    font-size: 1.5rem;
-    margin-bottom: 0.4rem;
-  }
-
-  .stat-card h3 {
-    font-size: 1.3rem;
-    margin: 0.4rem 0;
-    line-height: 1.2;
-  }
-
-  .stat-card p {
-    font-size: 0.75rem;
-    margin: 0;
-  }
-
-  /* ------------------ Improved Progress Circle Mobile ------------------ */
-  .progress-circle {
-    width: 100px;
-    height: 100px;
-    margin: 0.8rem auto;
-  }
-
-  .progress-circle::before {
-    width: 80px;
-    height: 80px;
-  }
-
-  .progress-circle span {
-    font-size: 1.1rem;
-  }
-
-  /* ------------------ Improved Task Management Mobile ------------------ */
-  .task-status-tabs {
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 0.4rem;
-    gap: 0.4rem;
-    margin-bottom: 1.2rem;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-
-  .task-status-tabs::-webkit-scrollbar {
-    display: none;
-  }
-
-  .task-status-tab {
-    flex: 0 0 auto;
-    min-width: 100px;
-    padding: 0.6rem 0.8rem;
-    font-size: 0.75rem;
-    white-space: nowrap;
-  }
-
-  /* Task Cards Mobile Improvements */
-  .task-card {
-    padding: 1rem;
-    border-radius: 12px;
-    margin-bottom: 0.8rem;
-    border-left: 4px solid var(--primary);
-  }
-
-  .task-card > div {
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-  }
-
-  .task-action-buttons {
-    flex-direction: row;
-    margin: 0;
-    gap: 0.4rem;
-    width: 100%;
-  }
-
-  .edit-btn, .delete-btn {
-    flex: 1;
-    padding: 0.6rem 0.8rem;
-    font-size: 0.75rem;
-    min-height: 40px;
-  }
-
-  .task-status-buttons {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    width: 100%;
-  }
-
-  .status-btn {
-    flex: 1;
-    min-width: 90px;
-    padding: 0.5rem 0.6rem;
-    font-size: 0.7rem;
-    justify-content: center;
-    min-height: 36px;
-  }
-
-  /* Keterangan tanggal di mobile - REVISI: di atas input */
-  .input-group label {
-    padding-left: 2.8rem;
-    font-size: 0.7rem;
-    margin-bottom: 0.25rem;
-  }
-
-  /* PERBAIKAN: Pastikan icon tetap di tengah di mobile */
-  .input-group i {
-    top: 50%;
-    transform: translateY(-50%);
-    left: 0.8rem;
-  }
-
-  /* Untuk input dengan label di atas */
-  .input-group.has-label i {
-    top: calc(50% + 0.4rem);
-  }
-
-  /* ------------------ Improved Forms Mobile ------------------ */
-  .input-group {
-    margin-bottom: 0.8rem;
-  }
-
-  .input {
-    padding: 0.8rem 0.8rem 0.8rem 2.8rem;
-    font-size: 15px;
-    border-radius: 10px;
-    min-height: 46px;
-  }
-
-  .input-group i {
-    left: 0.8rem;
-    font-size: 1rem;
-  }
-
-  .password-group .input {
-    padding-right: 2.8rem;
-    padding-left: 2.8rem;
-  }
-
-  .password-toggle {
-    right: 0.8rem;
-    width: 32px;
-    height: 32px;
-  }
-
-  .btn, .btn-secondary {
-    padding: 0.8rem;
-    border-radius: 10px;
-    font-size: 0.9rem;
-    min-height: 46px;
-    margin-bottom: 0.6rem;
-  }
-
-  /* ------------------ Improved Dashboard Grid Mobile ------------------ */
-  .dashboard-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-  }
-
-  .dashboard-grid .card {
-    margin-bottom: 0;
-  }
-
-  /* ------------------ Improved Kanban Board Mobile ------------------ */
-  .kanban-board {
-    flex-direction: column;
-    gap: 0.8rem;
-  }
-
-  .kanban-column {
-    min-width: 100%;
-    padding: 1rem;
-    border-radius: 14px;
-  }
-
-  .kanban-column h3 {
-    font-size: 1rem;
-    margin-bottom: 0.8rem;
-  }
-
-  /* ------------------ Improved Modal Mobile ------------------ */
-  .modal {
-    padding: 0.8rem;
-    align-items: flex-start;
-    padding-top: 8vh;
-  }
-
-  .modal-content {
-    width: 95%;
-    max-width: none;
-    padding: 1.2rem;
-    border-radius: 16px;
-    margin: 0 auto;
-  }
-
-  .modal-header {
-    margin-bottom: 1.2rem;
-  }
-
-  .modal-header h3 {
-    font-size: 1.2rem;
-  }
-
-  /* ------------------ Improved Auth Container Mobile ------------------ */
-  .auth-container {
-    padding: 0.8rem;
-    min-height: 100vh;
-    align-items: flex-start;
-    padding-top: 1.5rem;
-    flex-direction: column;
-  }
-
-  .auth-image {
-    display: none;
-  }
-
-  .auth-card {
-    width: 100%;
-    max-width: 360px;
-    padding: 1.5rem 1.2rem;
-    border-radius: 16px;
-    margin: 0 auto;
-  }
-
-  .auth-card h2 {
-    font-size: 1.3rem;
-    margin-bottom: 1.2rem;
-  }
-
-  /* Perbaikan tombol tab di mobile */
-  .tab-container {
-    margin-bottom: 1.2rem;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 0.3rem;
-    -webkit-overflow-scrolling: touch;
-  }
   
-  .tab-container::-webkit-scrollbar {
+  /* User profile untuk mobile - icon saja */
+  .user-profile.mobile-view .user-info {
     display: none;
   }
   
-  .tab {
-    flex: 0 0 auto;
-    min-width: 120px;
-    white-space: nowrap;
-    padding: 0.8rem 0.4rem;
-    font-size: 0.85rem;
-    min-height: 44px;
-  }
-
-  .input-group label {
-    padding-left: 2.8rem;
-    font-size: 0.7rem;
-  }
-
-  /* ------------------ Improved Footer Mobile ------------------ */
-  footer {
-    padding: 0.8rem;
-    font-size: 0.75rem;
-    position: relative;
-    bottom: 0;
-    width: 100%;
-  }
-
-  /* ------------------ Improved Toast Mobile ------------------ */
-  .toast {
-    left: 0.8rem;
-    right: 0.8rem;
-    bottom: 0.8rem;
-    width: auto;
-    text-align: center;
-    border-radius: 10px;
-    padding: 0.8rem 1.2rem;
-  }
-
-  /* ------------------ Improved Activity Items Mobile ------------------ */
-  .activity-item {
-    padding: 0.7rem 0;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .activity-icon {
-    width: 20px;
-    height: 20px;
-    font-size: 0.6rem;
-  }
-
-  .activity-title {
-    font-size: 0.7rem;
-    margin-bottom: 0.15rem;
-  }
-
-  .activity-time {
-    font-size: 0.6rem;
-  }
-
-  /* ------------------ Deadline Warning Mobile ------------------ */
-  .deadline-warning {
-    padding: 0.8rem;
-    border-radius: 10px;
-    margin-bottom: 0.8rem;
-    font-size: 0.8rem;
-  }
-
-  /* ------------------ Status Badges Mobile ------------------ */
-  .status-badge {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.7rem;
-    border-radius: 18px;
-  }
-
-  /* ------------------ Report Modal Improvements Mobile ------------------ */
-  .report-period-selector {
-    flex-direction: row;
-    overflow-x: auto;
-    gap: 0.4rem;
-    padding-bottom: 0.4rem;
-    scrollbar-width: none;
-  }
-
-  .report-period-selector::-webkit-scrollbar {
-    display: none;
-  }
-
-  .period-btn {
-    flex: 0 0 auto;
-    min-width: 90px;
-    padding: 0.6rem 0.8rem;
-    font-size: 0.75rem;
-  }
-
-  .report-summary {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.6rem;
-  }
-
-  .report-stat {
-    padding: 0.8rem 0.6rem;
-  }
-
-  .report-stat h4 {
-    font-size: 1.1rem;
-  }
-
-  .chart-bar {
-    gap: 0.4rem;
-  }
-
-  .chart-label {
-    min-width: 60px;
-    font-size: 0.7rem;
-  }
-
-  .chart-bar-inner {
-    height: 18px;
-  }
-
-  .chart-value {
-    min-width: 25px;
-    font-size: 0.7rem;
-  }
-
-  /* ------------------ Notification Settings Mobile ------------------ */
-  .notification-settings {
-    padding: 0.8rem;
-    margin: 0.8rem 0;
-  }
-
-  .notification-icon {
-    width: 32px;
-    height: 32px;
+  .user-profile.mobile-view .user-avatar {
+    width: 36px;
+    height: 36px;
     font-size: 0.9rem;
+  }
+  
+  .theme-toggle {
+    min-width: 42px;
+    min-height: 42px;
+    padding: 0.6rem;
   }
 }
 
-/* ==================== SMALL MOBILE ENHANCEMENTS ==================== */
+@media (max-width: 768px) {
+  body {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  
+  .app-header {
+    padding: 0.6rem 0.8rem;
+    min-height: 56px;
+  }
+  
+  .brand h1 {
+    font-size: 1.1rem;
+    gap: 0.4rem;
+  }
+  
+  .brand h1 i {
+    font-size: 1rem;
+  }
+  
+  .auth-container {
+    padding: 1.5rem 1rem;
+    flex-direction: column;
+  }
+  
+  .auth-image {
+    display: none;
+  }
+  
+  .auth-card {
+    width: 100%;
+    max-width: 400px;
+    padding: 1.5rem;
+  }
+  
+  .card {
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border-left-width: 4px;
+  }
+  
+  .task-card {
+    border-left-width: 4px;
+    padding: 1rem;
+  }
+  
+  .stats-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.8rem;
+  }
+  
+  .stat-card {
+    padding: 1.2rem 0.8rem;
+    min-height: 110px;
+  }
+  
+  .stat-card i {
+    font-size: 2rem;
+  }
+  
+  .stat-card h3 {
+    font-size: 1.8rem;
+  }
+  
+  .progress-circle {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .progress-circle::before {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .task-status-tabs {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0.8rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .task-status-tab {
+    min-width: 100px;
+    padding: 0.8rem;
+    font-size: 0.9rem;
+  }
+  
+  .kanban-board {
+    flex-direction: column;
+  }
+  
+  .kanban-column {
+    min-width: 100%;
+  }
+  
+  .modal-content {
+    width: 95%;
+    padding: 1.5rem;
+  }
+  
+  .input {
+    padding: 0.9rem 0.9rem 0.9rem 3rem;
+    font-size: 16px; /* Hindari zoom di iOS */
+  }
+  
+  .btn, .btn-secondary {
+    padding: 0.9rem;
+    min-height: 48px;
+  }
+  
+  /* Form input tugas menyesuaikan topnav */
+  .task-form-container {
+    padding: 1rem;
+    margin: 0 -0.5rem;
+    border-radius: 12px;
+    background: var(--card-bg);
+  }
+  
+  .task-form-container .input-group {
+    margin-bottom: 0.8rem;
+  }
+  
+  .task-form-container textarea.input {
+    min-height: 80px;
+    font-size: 1rem;
+  }
+  
+  .task-form-container .btn {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+}
+
 @media (max-width: 480px) {
   .app-header {
     padding: 0.5rem 0.6rem;
   }
-
+  
   .brand h1 {
-    font-size: 0.9rem;
-  }
-
-  .brand p {
-    font-size: 0.6rem;
-  }
-
-  .sidebar {
-    width: 90%;
-    padding: 1rem 0.6rem;
-  }
-
-  .card {
-    padding: 0.9rem;
-    margin-bottom: 0.6rem;
-  }
-
-  .stats-container {
-    grid-template-columns: 1fr;
-    gap: 0.4rem;
-  }
-
-  .stat-card {
-    padding: 0.9rem 0.5rem;
-    min-height: 90px;
-  }
-
-  .stat-card h3 {
-    font-size: 1.2rem;
-  }
-
-  .task-status-tab {
-    min-width: 85px;
-    padding: 0.5rem 0.6rem;
-    font-size: 0.7rem;
-  }
-
-  .tab {
-    padding: 0.7rem 0.4rem;
-    font-size: 0.75rem;
-    min-height: 42px;
-  }
-
-  .input {
-    padding: 0.7rem 0.7rem 0.7rem 2.5rem;
-    min-height: 42px;
-  }
-
-  .password-group .input {
-    padding-right: 2.5rem;
-    padding-left: 2.5rem;
-  }
-
-  .btn, .btn-secondary {
-    padding: 0.7rem;
-    min-height: 42px;
-  }
-
-  .progress-circle {
-    width: 90px;
-    height: 90px;
-  }
-
-  .progress-circle::before {
-    width: 70px;
-    height: 70px;
-  }
-
-  .progress-circle span {
     font-size: 1rem;
   }
-
-  .auth-card {
-    padding: 1.2rem 1rem;
+  
+  .sidebar-toggle {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
   }
-
-  .modal-content {
-    padding: 1rem;
+  
+  .stats-container {
+    grid-template-columns: 1fr;
   }
-
-  .quick button {
-    padding: 0.6rem 0.7rem;
-    font-size: 0.75rem;
+  
+  .task-action-buttons {
+    flex-direction: row;
+    margin: 0;
+    width: 100%;
+    gap: 0.5rem;
   }
-
+  
+  .edit-btn, .delete-btn {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+  }
+  
+  .task-status-buttons {
+    flex-direction: column;
+  }
+  
+  .status-btn {
+    width: 100%;
+  }
+  
   .report-summary {
     grid-template-columns: 1fr;
   }
-}
-
-/* ==================== EXTRA SMALL MOBILE ==================== */
-@media (max-width: 360px) {
-  .app-header {
-    padding: 0.4rem;
-  }
-
-  .header-left {
-    gap: 0.4rem;
-  }
-
-  .brand h1 {
-    font-size: 0.85rem;
-  }
-
-  .sidebar-toggle {
+  
+  .user-profile.mobile-view .user-avatar {
     width: 32px;
     height: 32px;
     font-size: 0.8rem;
   }
-
+  
   .theme-toggle {
-    padding: 0.4rem;
-    min-width: 36px;
-    min-height: 36px;
-    font-size: 0.7rem;
-  }
-
-  .card {
-    padding: 0.8rem;
-  }
-
-  .stats-container {
-    grid-template-columns: 1fr;
-  }
-
-  .task-status-tabs {
-    gap: 0.2rem;
-  }
-
-  .task-status-tab {
-    min-width: 80px;
-    padding: 0.45rem 0.5rem;
-    font-size: 0.65rem;
-  }
-
-  .auth-card {
-    padding: 1rem 0.8rem;
-  }
-
-  .tab {
-    padding: 0.7rem 0.4rem;
-    font-size: 0.75rem;
-    min-height: 40px;
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0.5rem;
   }
 }
 
@@ -2204,23 +1980,34 @@ footer {
   .filter-btn,
   .period-btn,
   .password-toggle {
-    min-height: 40px;
-    min-width: 40px;
+    min-height: 44px;
+    min-width: 44px;
   }
-
-  /* Improve text readability */
-  body {
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
-  }
-
+  
   /* Better scrolling experience */
   .kanban-board,
   .task-status-tabs,
-  .report-period-selector {
+  .report-period-selector,
+  .report-content {
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
-
+  
+  .kanban-board::-webkit-scrollbar,
+  .task-status-tabs::-webkit-scrollbar,
+  .report-period-selector::-webkit-scrollbar,
+  .report-content::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Improve focus states for accessibility */
+  button:focus-visible,
+  .btn:focus-visible,
+  .input:focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 2px;
+  }
+  
   /* Prevent text selection on interactive elements */
   button, 
   .btn, 
@@ -2228,20 +2015,12 @@ footer {
     -webkit-tap-highlight-color: transparent;
     user-select: none;
   }
-
-  /* Improve focus states for accessibility */
-  button:focus-visible,
-  .btn:focus-visible,
-  .input:focus-visible {
-    outline: 2px solid var(--primary);
-    outline-offset: 2px;
-  }
 }
 
 .loading {
   display: inline-block;
-  width: 20px;
-  height: 20px;
+  width: 22px; /* DIBESARKAN */
+  height: 22px; /* DIBESARKAN */
   border: 3px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   border-top-color: white;
@@ -2268,3 +2047,1441 @@ footer {
 .p-2 { padding: var(--spacing-sm); }
 .p-3 { padding: var(--spacing-md); }
 .p-4 { padding: var(--spacing-lg); }
+
+/* Improved spacing for better readability */
+p, .task-item, .project-item, .activity-item {
+  margin-bottom: 0.8rem;
+}
+
+h1, h2, h3, h4 {
+  margin-bottom: 0.8rem;
+  line-height: 1.3;
+}
+
+h1 { font-size: 1.8rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.3rem; }
+h4 { font-size: 1.1rem; }
+
+/* Better line spacing for text */
+p, li, span {
+  line-height: 1.6;
+}
+
+/* Enhanced button spacing */
+.btn + .btn,
+.btn-secondary + .btn-secondary {
+  margin-top: 0.8rem;
+}
+
+/* Better form spacing */
+.input-group + .input-group {
+  margin-top: 0.8rem;
+}
+
+/* Card content spacing */
+.card > *:not(:last-child) {
+  margin-bottom: 1rem;
+}
+
+/* ------------------ Task List Improvements ------------------ */
+.task-list-container {
+  margin-top: var(--spacing-md);
+}
+
+.task-list-item {
+  padding: var(--spacing-sm);
+  border-bottom: 1px solid var(--border);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.task-list-item:hover {
+  background: var(--card-bg);
+  border-radius: 8px;
+}
+
+.task-list-item:last-child {
+  border-bottom: none;
+}
+
+.task-list-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 2px 0 0 2px;
+  -webkit-border-radius: 2px 0 0 2px;
+  -moz-border-radius: 2px 0 0 2px;
+  -ms-border-radius: 2px 0 0 2px;
+  -o-border-radius: 2px 0 0 2px;
+}
+
+.task-list-item.todo::before {
+  background: var(--gray);
+}
+
+.task-list-item.inprogress::before {
+  background: var(--warning);
+}
+
+.task-list-item.done::before {
+  background: var(--success);
+}
+
+/* ==================== REVISI TAMPILAN TUGAS SEPERTI PROYEK ==================== */
+
+/* Form tambah tugas - disamakan dengan tampilan proyek */
+.task-form-container {
+  background: var(--card-bg);
+  padding: var(--spacing-lg);
+  border-radius: 16px;
+  margin-bottom: var(--spacing-md);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Input form tugas lebih besar */
+.task-form-container .input,
+.task-form-container textarea.input,
+.task-form-container select.input {
+  font-size: 1.05rem;
+  padding: 1rem 1rem 1rem 3rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  transition: all 0.2s ease;
+}
+
+.task-form-container textarea.input {
+  min-height: 120px;
+  resize: vertical;
+  font-family: "Poppins", sans-serif;
+  line-height: 1.6;
+}
+
+.task-form-container .input:focus,
+.task-form-container textarea.input:focus,
+.task-form-container select.input:focus {
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  outline: none;
+}
+
+/* Tombol tambah tugas lebih besar */
+.task-form-container .btn {
+  padding: 1rem;
+  font-size: 1.05rem;
+  border-radius: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+/* ==================== REVISI TAMPILAN TUGAS DI DASHBOARD ==================== */
+
+/* Dashboard task item - perbaikan garis biru */
+.dashboard-task-item {
+  padding: 1.2rem 0 1.2rem 1.5rem; /* Padding kiri ditambah untuk garis */
+  border-bottom: 1px solid var(--border);
+  transition: all 0.2s ease;
+  position: relative;
+  margin-left: -1rem; /* Offset untuk kompensasi padding kiri */
+  margin-right: -1rem;
+}
+
+.dashboard-task-item:hover {
+  background: var(--card-bg);
+  padding: 1.2rem 1rem 1.2rem 1.5rem;
+  border-radius: 12px;
+  margin: 0.5rem -0.5rem;
+}
+
+/* Garis biru di kiri untuk dashboard task */
+.dashboard-task-item::before {
+  content: '';
+  position: absolute;
+  left: 0.5rem; /* Jarak dari kiri */
+  top: 0.8rem; /* Jarak dari atas */
+  bottom: 0.8rem; /* Jarak dari bawah */
+  width: 5px;
+  background: var(--primary);
+  border-radius: 3px;
+  z-index: 1;
+}
+
+/* Dashboard project item - perbaikan garis biru */
+.dashboard-project-item {
+  padding: 1.2rem 0 1.2rem 1.5rem; /* Padding kiri ditambah untuk garis */
+  border-bottom: 1px solid var(--border);
+  transition: all 0.2s ease;
+  position: relative;
+  margin-left: -1rem; /* Offset untuk kompensasi padding kiri */
+  margin-right: -1rem;
+}
+
+.dashboard-project-item:hover {
+  background: var(--card-bg);
+  padding: 1.2rem 1rem 1.2rem 1.5rem;
+  border-radius: 12px;
+  margin: 0.5rem -0.5rem;
+}
+
+/* Garis biru di kiri untuk dashboard project */
+.dashboard-project-item::before {
+  content: '';
+  position: absolute;
+  left: 0.5rem; /* Jarak dari kiri */
+  top: 0.8rem; /* Jarak dari atas */
+  bottom: 0.8rem; /* Jarak dari bawah */
+  width: 5px;
+  background: var(--primary);
+  border-radius: 3px;
+  z-index: 1;
+}
+
+/* Status badge untuk dashboard */
+.dashboard-task-item .status-badge {
+  font-size: 0.85rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+/* Deadline text di dashboard */
+.deadline-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+}
+
+.deadline-text.overdue {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.deadline-text.today {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.deadline-text.soon {
+  color: var(--info);
+  font-weight: 600;
+}
+
+/* ==================== REVISI TAMPILAN KARTU TUGAS ==================== */
+
+/* Task card yang konsisten dengan proyek */
+.task-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.task-card.todo {
+  border-left: 5px solid var(--gray);
+}
+
+.task-card.inprogress {
+  border-left: 5px solid var(--warning);
+}
+
+.task-card.done {
+  border-left: 5px solid var(--success);
+}
+
+.task-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Task header di dalam card */
+.task-card h4 {
+  margin: 0 0 0.8rem 0;
+  color: var(--dark);
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* Task description */
+.task-card p {
+  margin: 0 0 1rem 0;
+  color: var(--gray);
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+/* Task meta info */
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.95rem;
+}
+
+/* ==================== REVISI TAMPILAN PROYEK ==================== */
+
+/* Project card styling */
+.project-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  transition: all 0.3s ease;
+  position: relative;
+  border-left: 5px solid var(--primary);
+}
+
+.project-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.project-card h4 {
+  margin: 0 0 0.8rem 0;
+  color: var(--dark);
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.project-card p {
+  margin: 0 0 1rem 0;
+  color: var(--gray);
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+/* ==================== RESPONSIVE ENHANCEMENTS ==================== */
+
+@media (max-width: 768px) {
+  /* Form container di mobile */
+  .task-form-container,
+  .project-form-container {
+    padding: var(--spacing-md);
+    margin: 0 -0.5rem;
+    border-radius: 12px;
+  }
+  
+  /* Input di mobile */
+  .task-form-container .input,
+  .task-form-container textarea.input,
+  .task-form-container select.input {
+    font-size: 16px; /* Prevent zoom on iOS */
+    padding: 0.9rem 0.9rem 0.9rem 3rem;
+  }
+  
+  /* Dashboard items di mobile */
+  .dashboard-task-item,
+  .dashboard-project-item {
+    padding: 1rem 0 1rem 1.2rem;
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+  }
+  
+  .dashboard-task-item:hover,
+  .dashboard-project-item:hover {
+    padding: 1rem 0.5rem 1rem 1.2rem;
+    margin: 0.3rem -0.3rem;
+  }
+  
+  /* Garis di mobile lebih kecil */
+  .dashboard-task-item::before,
+  .dashboard-project-item::before {
+    left: 0.3rem;
+    top: 0.6rem;
+    bottom: 0.6rem;
+    width: 4px;
+  }
+  
+  /* Task card di mobile */
+  .task-card,
+  .project-card {
+    padding: var(--spacing-sm);
+    border-radius: 12px;
+  }
+  
+  /* Task meta di mobile */
+  .task-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+/* ==================== STYLE UNTUK FORM KONSISTEN ==================== */
+
+/* Container form yang konsisten */
+.task-form-container, .project-form-container {
+    background: var(--card-bg);
+    padding: var(--spacing-lg);
+    border-radius: 16px;
+    margin-bottom: var(--spacing-lg);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Style untuk input dalam form */
+.task-form-container .input-group,
+.project-form-container .input-group {
+    margin-bottom: 1.2rem;
+}
+
+.task-form-container input.input,
+.task-form-container textarea.input,
+.task-form-container select.input,
+.project-form-container input.input,
+.project-form-container textarea.input,
+.project-form-container select.input {
+    width: 100%;
+    padding: 1rem 1rem 1rem 3rem;
+    border: 1px solid #c7d2fe;
+    border-radius: 12px;
+    background: var(--card-bg);
+    transition: all 0.2s ease;
+    font-size: 1.05rem;
+    font-family: "Poppins", sans-serif;
+    color: var(--dark);
+}
+
+.task-form-container textarea.input,
+.project-form-container textarea.input {
+    min-height: 120px;
+    resize: vertical;
+    line-height: 1.6;
+}
+
+.task-form-container .input:focus,
+.task-form-container textarea.input:focus,
+.task-form-container select.input:focus,
+.project-form-container .input:focus,
+.project-form-container textarea.input:focus,
+.project-form-container select.input:focus {
+    border-color: var(--primary-light);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+/* Style untuk select dropdown */
+.task-form-container select.input,
+.project-form-container select.input {
+    cursor: pointer;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%236b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1rem;
+}
+
+/* Style untuk icon dalam form */
+.task-form-container .input-group i,
+.project-form-container .input-group i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray);
+    z-index: 2;
+    width: 18px;
+    text-align: center;
+    font-size: 1.05rem;
+}
+
+/* Style untuk textarea khusus */
+.task-form-container textarea.input + i,
+.project-form-container textarea.input + i {
+    top: 1.2rem;
+    transform: none;
+}
+
+/* Tombol dalam form */
+.task-form-container .btn,
+.project-form-container .btn {
+    width: 100%;
+    padding: 1rem;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1.05rem;
+    background: linear-gradient(90deg, var(--primary), var(--primary-light));
+    color: white;
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+}
+
+.task-form-container .btn:hover,
+.project-form-container .btn:hover {
+    opacity: 0.9;
+    box-shadow: 0 6px 15px rgba(79, 70, 229, 0.3);
+    transform: translateY(-2px);
+}
+
+/* ==================== STYLE UNTUK KARTU TUGAS DAN PROYEK ==================== */
+
+/* Style untuk task card */
+.task-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.task-card.todo {
+    border-left: 5px solid var(--gray);
+}
+
+.task-card.inprogress {
+    border-left: 5px solid var(--warning);
+}
+
+.task-card.done {
+    border-left: 5px solid var(--success);
+}
+
+.task-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Style untuk project card */
+.project-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    transition: all 0.3s ease;
+    position: relative;
+    border-left: 5px solid var(--primary);
+}
+
+.project-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Header untuk card */
+.task-card h4,
+.project-card h4 {
+    margin: 0 0 0.8rem 0;
+    color: var(--dark);
+    font-size: 1.2rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+/* Deskripsi dalam card */
+.task-card p,
+.project-card p {
+    margin: 0 0 1rem 0;
+    color: var(--gray);
+    line-height: 1.6;
+    font-size: 1rem;
+}
+
+/* Meta info dalam card */
+.task-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.95rem;
+}
+
+/* ==================== STYLE UNTUK DASHBOARD ITEMS ==================== */
+
+/* Dashboard task item dengan garis biru yang tepat */
+.dashboard-task-item {
+    padding: 1.2rem 0 1.2rem 1.8rem; /* Padding kiri lebih besar untuk garis */
+    border-bottom: 1px solid var(--border);
+    transition: all 0.2s ease;
+    position: relative;
+    margin: 0.3rem 0;
+}
+
+.dashboard-task-item:hover {
+    background: var(--card-bg);
+    padding: 1.2rem 1rem 1.2rem 1.8rem;
+    border-radius: 12px;
+    margin: 0.3rem -0.5rem;
+}
+
+/* Garis biru di kiri untuk dashboard task */
+.dashboard-task-item::before {
+    content: '';
+    position: absolute;
+    left: 0.8rem; /* Jarak dari kiri yang pas */
+    top: 1rem; /* Tidak dari 0, jadi tidak tabrakan */
+    bottom: 1rem; /* Tidak sampai 100%, jadi tidak tabrakan */
+    width: 4px;
+    background: var(--primary);
+    border-radius: 2px;
+    z-index: 1;
+}
+
+/* Dashboard project item dengan garis biru yang tepat */
+.dashboard-project-item {
+    padding: 1.2rem 0 1.2rem 1.8rem; /* Padding kiri lebih besar untuk garis */
+    border-bottom: 1px solid var(--border);
+    transition: all 0.2s ease;
+    position: relative;
+    margin: 0.3rem 0;
+}
+
+.dashboard-project-item:hover {
+    background: var(--card-bg);
+    padding: 1.2rem 1rem 1.2rem 1.8rem;
+    border-radius: 12px;
+    margin: 0.3rem -0.5rem;
+}
+
+/* Garis biru di kiri untuk dashboard project */
+.dashboard-project-item::before {
+    content: '';
+    position: absolute;
+    left: 0.8rem; /* Jarak dari kiri yang pas */
+    top: 1rem; /* Tidak dari 0, jadi tidak tabrakan */
+    bottom: 1rem; /* Tidak sampai 100%, jadi tidak tabrakan */
+    width: 4px;
+    background: var(--primary);
+    border-radius: 2px;
+    z-index: 1;
+}
+
+/* Konten dalam dashboard items */
+.dashboard-task-item > div,
+.dashboard-project-item > div {
+    position: relative;
+    z-index: 2; /* Pastikan konten di atas garis */
+}
+
+/* Deadline text di dashboard */
+.deadline-text {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    margin-top: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    background: rgba(0,0,0,0.03);
+    width: fit-content;
+}
+
+.deadline-text.overdue {
+    color: var(--danger);
+    font-weight: 600;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.deadline-text.today {
+    color: var(--warning);
+    font-weight: 600;
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.deadline-text.soon {
+    color: var(--info);
+    font-weight: 600;
+    background: rgba(6, 182, 212, 0.1);
+}
+
+/* ==================== RESPONSIVE ENHANCEMENTS ==================== */
+
+@media (max-width: 768px) {
+    /* Form container di mobile */
+    .task-form-container,
+    .project-form-container {
+        padding: var(--spacing-md);
+        margin: 0 -0.5rem 1.5rem -0.5rem;
+        border-radius: 12px;
+    }
+    
+    /* Input di mobile */
+    .task-form-container .input,
+    .task-form-container textarea.input,
+    .task-form-container select.input,
+    .project-form-container .input,
+    .project-form-container textarea.input,
+    .project-form-container select.input {
+        font-size: 16px; /* Prevent zoom on iOS */
+        padding: 0.9rem 0.9rem 0.9rem 3rem;
+    }
+    
+    /* Textarea di mobile */
+    .task-form-container textarea.input,
+    .project-form-container textarea.input {
+        min-height: 100px;
+    }
+    
+    /* Dashboard items di mobile */
+    .dashboard-task-item,
+    .dashboard-project-item {
+        padding: 1rem 0 1rem 1.5rem;
+        margin: 0.2rem 0;
+    }
+    
+    .dashboard-task-item:hover,
+    .dashboard-project-item:hover {
+        padding: 1rem 0.5rem 1rem 1.5rem;
+        margin: 0.2rem -0.3rem;
+    }
+    
+    /* Garis di mobile lebih kecil */
+    .dashboard-task-item::before,
+    .dashboard-project-item::before {
+        left: 0.6rem;
+        top: 0.8rem;
+        bottom: 0.8rem;
+        width: 3px;
+    }
+    
+    /* Task dan project card di mobile */
+    .task-card,
+    .project-card {
+        padding: var(--spacing-sm);
+        border-radius: 12px;
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    /* Task meta di mobile */
+    .task-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    /* Tombol aksi di mobile */
+    .task-action-buttons {
+        flex-direction: row;
+        width: 100%;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .task-action-buttons button {
+        flex: 1;
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* ==================== MOBILE ENHANCEMENTS UNTUK TUGAS ==================== */
+
+/* Form tambah tugas di mobile */
+@media (max-width: 768px) {
+  .task-form-container {
+    padding: var(--spacing-md);
+    margin: 0 -0.5rem var(--spacing-md) -0.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+  }
+  
+  .task-form-container h3 {
+    font-size: 1.2rem;
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  
+  /* Input grup di mobile */
+  .task-form-container .input-group {
+    margin-bottom: 1rem;
+  }
+  
+  .task-form-container .input,
+  .task-form-container textarea.input,
+  .task-form-container select.input {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+    padding: 0.9rem 0.9rem 0.9rem 3rem !important;
+    border-radius: 10px !important;
+    line-height: 1.5 !important;
+  }
+  
+  .task-form-container textarea.input {
+    min-height: 100px !important;
+    padding-top: 0.9rem !important;
+  }
+  
+  /* Tombol di mobile */
+  .task-form-container .btn {
+    padding: 0.9rem !important;
+    font-size: 1rem !important;
+    min-height: 48px !important;
+    border-radius: 10px !important;
+  }
+  
+  /* Task status tabs di mobile */
+  .task-status-tabs {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0.8rem;
+    margin-bottom: 1.5rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .task-status-tab {
+    min-width: 90px;
+    padding: 0.8rem 0.5rem;
+    font-size: 0.9rem;
+    min-height: 44px;
+    gap: 0.4rem;
+  }
+  
+  /* Task card di mobile - sama seperti project card */
+  .task-card {
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+    border-radius: 12px !important;
+    border-left-width: 4px !important;
+  }
+  
+  .task-card h4 {
+    font-size: 1.1rem !important;
+    margin-bottom: 0.8rem !important;
+    line-height: 1.4 !important;
+  }
+  
+  .task-card p {
+    font-size: 0.95rem !important;
+    line-height: 1.5 !important;
+    padding: 0.6rem !important;
+    border-radius: 6px !important;
+  }
+  
+  /* Task meta di mobile */
+  .task-meta {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.5rem !important;
+    margin-bottom: 0.8rem !important;
+  }
+  
+  /* Status badge di mobile */
+  .status-badge {
+    padding: 0.4rem 0.9rem !important;
+    font-size: 0.85rem !important;
+    border-radius: 20px !important;
+  }
+  
+  /* Tombol aksi status di mobile */
+  .task-status-buttons {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    margin-top: 1rem !important;
+  }
+  
+  .status-btn {
+    width: 100% !important;
+    padding: 0.7rem 1rem !important;
+    min-height: 44px !important;
+    font-size: 0.9rem !important;
+    justify-content: center !important;
+  }
+  
+  /* Tombol edit/delete di mobile */
+  .task-action-buttons {
+    flex-direction: row !important;
+    width: 100% !important;
+    gap: 0.5rem !important;
+    margin-top: 1rem !important;
+    margin-left: 0 !important;
+  }
+  
+  .edit-btn, .delete-btn {
+    flex: 1 !important;
+    padding: 0.7rem 1rem !important;
+    font-size: 0.85rem !important;
+    min-height: 44px !important;
+  }
+  
+  /* Deadline text di mobile */
+  .deadline-text {
+    font-size: 0.9rem !important;
+    padding: 0.5rem 0.8rem !important;
+    width: 100% !important;
+  }
+}
+
+/* Tablet landscape (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .task-form-container {
+    padding: var(--spacing-md) !important;
+  }
+  
+  .task-card {
+    padding: var(--spacing-sm) !important;
+  }
+  
+  .task-action-buttons {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .edit-btn, .delete-btn {
+    min-width: 100% !important;
+  }
+}
+
+/* Mobile kecil (≤ 480px) */
+@media (max-width: 480px) {
+  .task-status-tabs {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 0.3rem;
+  }
+  
+  .task-status-tab {
+    min-width: 70px;
+    padding: 0.6rem 0.3rem;
+    font-size: 0.8rem;
+    gap: 0.3rem;
+  }
+  
+  .task-card h4 {
+    font-size: 1rem !important;
+  }
+  
+  .task-form-container .input,
+  .task-form-container textarea.input,
+  .task-form-container select.input {
+    padding: 0.8rem 0.8rem 0.8rem 2.8rem !important;
+  }
+  
+  .task-form-container .btn {
+    padding: 0.8rem !important;
+    font-size: 0.95rem !important;
+  }
+}
+
+/* ==================== STYLE UNTUK MODAL EDIT TUGAS DI MOBILE ==================== */
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95% !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    padding: 1.2rem !important;
+    margin: 1rem !important;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.2rem !important;
+  }
+  
+  .modal-header .modal-close {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 1.2rem !important;
+  }
+  
+  /* Form edit tugas di modal */
+  .modal-content .input-group {
+    margin-bottom: 0.8rem !important;
+  }
+  
+  .modal-content .input,
+  .modal-content textarea.input,
+  .modal-content select.input {
+    font-size: 16px !important;
+    padding: 0.8rem 0.8rem 0.8rem 3rem !important;
+    border-radius: 10px !important;
+  }
+  
+  .modal-content textarea.input {
+    min-height: 100px !important;
+  }
+  
+  .modal-content .btn {
+    padding: 0.9rem !important;
+    font-size: 1rem !important;
+    min-height: 48px !important;
+    border-radius: 10px !important;
+  }
+}
+
+/* ==================== MOBILE ENHANCEMENTS UNTUK TAMPILAN TUGAS ==================== */
+
+@media (max-width: 768px) {
+  /* Task form container di mobile */
+  .task-form-container {
+    padding: 1.2rem !important;
+    margin: 0 0 1.5rem 0 !important;
+    border-radius: 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Input grup di mobile */
+  .task-form-container .input-group {
+    margin-bottom: 0.8rem;
+  }
+  
+  .task-form-container .input,
+  .task-form-container textarea.input,
+  .task-form-container select.input {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+    padding: 0.9rem 0.9rem 0.9rem 3rem !important;
+    border-radius: 10px !important;
+    line-height: 1.5 !important;
+  }
+  
+  .task-form-container textarea.input {
+    min-height: 100px !important;
+    padding-top: 0.9rem !important;
+  }
+  
+  /* Tombol submit di mobile */
+  .task-form-container .btn {
+    padding: 0.9rem !important;
+    font-size: 1rem !important;
+    min-height: 48px !important;
+    border-radius: 10px !important;
+  }
+  
+  /* Task cards di mobile - tampilan seperti proyek */
+  .task-card {
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+    border-radius: 12px !important;
+    border-left-width: 4px !important;
+  }
+  
+  .task-card h4 {
+    font-size: 1.1rem !important;
+    margin-bottom: 0.8rem !important;
+    line-height: 1.4 !important;
+  }
+  
+  /* Deadline text styling untuk mobile */
+  .deadline-text {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    font-size: 0.9rem !important;
+    padding: 0.6rem 0.8rem !important;
+    border-radius: 8px !important;
+    margin-bottom: 0.5rem !important;
+    width: 100% !important;
+  }
+  
+  .deadline-text.overdue {
+    background: rgba(239, 68, 68, 0.1) !important;
+    color: var(--danger) !important;
+    font-weight: 600 !important;
+  }
+  
+  .deadline-text.today {
+    background: rgba(245, 158, 11, 0.1) !important;
+    color: var(--warning) !important;
+    font-weight: 600 !important;
+  }
+  
+  .deadline-text.soon {
+    background: rgba(6, 182, 212, 0.1) !important;
+    color: var(--info) !important;
+    font-weight: 600 !important;
+  }
+  
+  /* Status badge di mobile */
+  .status-badge {
+    padding: 0.4rem 0.9rem !important;
+    font-size: 0.85rem !important;
+    border-radius: 20px !important;
+    width: fit-content !important;
+  }
+  
+  /* Task status buttons di mobile */
+  .task-status-buttons {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.6rem !important;
+    margin-top: 1rem !important;
+  }
+  
+  .task-status-buttons .status-btn {
+    width: 100% !important;
+    padding: 0.7rem !important;
+    font-size: 0.9rem !important;
+    min-height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+  }
+  
+  /* Task action buttons di mobile */
+  .task-action-buttons {
+    display: flex !important;
+    gap: 0.6rem !important;
+    margin-top: 1rem !important;
+    width: 100% !important;
+  }
+  
+  .task-action-buttons .edit-btn,
+  .task-action-buttons .delete-btn {
+    flex: 1 !important;
+    padding: 0.7rem !important;
+    font-size: 0.9rem !important;
+    min-height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+  }
+  
+  /* Task status tabs di mobile */
+  .task-status-tabs {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    padding: 0.8rem !important;
+    margin-bottom: 1.5rem !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+  
+  .task-status-tabs::-webkit-scrollbar {
+    display: none !important;
+  }
+  
+  .task-status-tab {
+    min-width: 90px !important;
+    padding: 0.8rem 0.5rem !important;
+    font-size: 0.9rem !important;
+    min-height: 44px !important;
+    gap: 0.4rem !important;
+    flex-shrink: 0 !important;
+  }
+}
+
+/* Untuk layar sangat kecil (≤ 480px) */
+@media (max-width: 480px) {
+  .task-status-tab {
+    min-width: 70px !important;
+    padding: 0.6rem 0.3rem !important;
+    font-size: 0.8rem !important;
+  }
+  
+  .task-form-container {
+    padding: 1rem !important;
+  }
+  
+  .task-form-container .input,
+  .task-form-container textarea.input,
+  .task-form-container select.input {
+    padding: 0.8rem 0.8rem 0.8rem 2.8rem !important;
+  }
+  
+  .task-card {
+    padding: 0.9rem !important;
+  }
+}
+
+/* ==================== MODAL ENHANCEMENTS FOR MOBILE ==================== */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95% !important;
+        max-height: 90vh !important;
+        overflow-y: auto !important;
+        padding: 1.2rem !important;
+        margin: 1rem !important;
+        border-radius: 16px !important;
+    }
+    
+    .modal-header {
+        margin-bottom: 1.2rem !important;
+    }
+    
+    .modal-header h3 {
+        font-size: 1.2rem !important;
+    }
+    
+    .modal-header .modal-close {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 1.2rem !important;
+        border-radius: 8px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    /* Input groups di modal mobile */
+    .modal-content .input-group {
+        margin-bottom: 0.8rem !important;
+    }
+    
+    .modal-content .input,
+    .modal-content textarea.input,
+    .modal-content select.input {
+        font-size: 16px !important;
+        padding: 0.9rem 0.9rem 0.9rem 3rem !important;
+        border-radius: 10px !important;
+        min-height: 44px !important;
+    }
+    
+    .modal-content textarea.input {
+        min-height: 100px !important;
+        padding-top: 0.9rem !important;
+        line-height: 1.5 !important;
+    }
+    
+    /* Icons di modal */
+    .modal-content .input-group i {
+        font-size: 1rem !important;
+        width: 18px !important;
+        left: 14px !important;
+    }
+    
+    /* Tombol di modal */
+    .modal-content .btn,
+    .modal-content .btn-secondary {
+        padding: 0.9rem !important;
+        font-size: 1rem !important;
+        min-height: 48px !important;
+        border-radius: 10px !important;
+    }
+    
+    /* Select dropdown di modal */
+    .modal-content select.input {
+        background-position: right 0.9rem center !important;
+    }
+}
+
+/* Untuk layar sangat kecil (≤ 480px) */
+@media (max-width: 480px) {
+    .modal-content {
+        padding: 1rem !important;
+        margin: 0.5rem !important;
+    }
+    
+    .modal-header h3 {
+        font-size: 1.1rem !important;
+    }
+    
+    .modal-content .input,
+    .modal-content textarea.input,
+    .modal-content select.input {
+        padding: 0.8rem 0.8rem 0.8rem 2.8rem !important;
+    }
+    
+    .modal-content .btn,
+    .modal-content .btn-secondary {
+        padding: 0.8rem !important;
+        font-size: 0.95rem !important;
+    }
+}
+
+/* ==================== ANIMASI MODAL UNTUK MOBILE ==================== */
+.modal.show {
+    animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==================== TOUCH FRIENDLY MODAL ==================== */
+@media (max-width: 768px) {
+    .modal {
+        align-items: flex-start !important;
+        padding-top: 20px !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    
+    .modal-content {
+        -webkit-overflow-scrolling: touch !important;
+        max-height: 80vh !important;
+    }
+    
+    /* Pastikan modal bisa discroll di iOS */
+    .modal-content::-webkit-scrollbar {
+        display: none !important;
+    }
+}
+
+/* ==================== CENTERED LAYOUT FOR TASK MANAGEMENT ==================== */
+
+/* Container utama untuk manajemen tugas */
+.task-management-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Form container yang terpusat */
+.centered-form-container {
+    background: var(--card-bg);
+    padding: var(--spacing-lg);
+    border-radius: 16px;
+    margin: 0 auto var(--spacing-lg) auto;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    max-width: 800px;
+    width: 100%;
+}
+
+/* Task list container yang terpusat */
+.centered-task-list {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Task card yang terpusat */
+.centered-task-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: var(--spacing-md);
+    width: 100%;
+    max-width: 800px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.centered-task-card.todo {
+    border-left: 5px solid var(--gray);
+}
+
+.centered-task-card.inprogress {
+    border-left: 5px solid var(--warning);
+}
+
+.centered-task-card.done {
+    border-left: 5px solid var(--success);
+}
+
+.centered-task-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Header yang terpusat */
+.centered-header {
+    text-align: center;
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 2px solid var(--border);
+}
+
+.centered-header h2 {
+    font-size: 1.8rem;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+}
+
+.centered-header p {
+    color: var(--gray);
+    font-size: 1.1rem;
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* Status tabs yang terpusat */
+.centered-status-tabs {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-lg);
+    flex-wrap: wrap;
+}
+
+/* Empty state yang terpusat */
+.centered-empty-state {
+    text-align: center;
+    color: var(--gray);
+    padding: var(--spacing-xl);
+    font-size: 1.1rem;
+    border: 2px dashed var(--border);
+    background: rgba(0,0,0,0.02);
+    border-radius: 16px;
+    max-width: 600px;
+    margin: var(--spacing-lg) auto;
+}
+
+/* Responsive untuk centered layout */
+@media (max-width: 768px) {
+    .centered-form-container {
+        padding: var(--spacing-md);
+        margin: 0 auto var(--spacing-md) auto;
+        border-radius: 12px;
+    }
+    
+    .centered-task-card {
+        padding: var(--spacing-sm);
+        border-radius: 12px;
+        border-left-width: 4px;
+    }
+    
+    .centered-header h2 {
+        font-size: 1.4rem;
+    }
+    
+    .centered-empty-state {
+        padding: var(--spacing-lg);
+        margin: var(--spacing-md) auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .task-management-container {
+        padding: 0 0.5rem;
+    }
+    
+    .centered-form-container {
+        padding: 1rem;
+    }
+    
+    .centered-task-card {
+        padding: 0.9rem;
+    }
+}
+

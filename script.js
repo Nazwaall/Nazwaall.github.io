@@ -4,6 +4,145 @@ let currentUser = JSON.parse(localStorage.getItem("currentUser")) || null;
 let sidebarCollapsed = false;
 let currentTaskFilter = 'all';
 let currentTheme = localStorage.getItem("flowsync_theme") || "light";
+let currentView = 'dashboard'; // Menyimpan view saat ini
+
+// ============ Cloud Sync System ============
+const CloudSyncManager = {
+    // Simulasi API endpoint (dalam aplikasi nyata, ini akan menjadi URL server)
+    API_BASE_URL: 'https://api.flowsync.demo',
+    
+    // Cek koneksi internet
+    isOnline() {
+        return navigator.onLine;
+    },
+    
+    // Simpan data ke localStorage dengan timestamp
+    saveToLocal(key, data) {
+        const saveData = {
+            data: data,
+            timestamp: Date.now(),
+            synced: false
+        };
+        localStorage.setItem(key, JSON.stringify(saveData));
+        return saveData;
+    },
+    
+    // Ambil data dari localStorage
+    getFromLocal(key) {
+        const saved = localStorage.getItem(key);
+        if (!saved) return null;
+        
+        try {
+            const parsed = JSON.parse(saved);
+            return parsed.data;
+        } catch (e) {
+            return null;
+        }
+    },
+    
+    // Simulasi sync dengan server
+    async syncWithServer() {
+        if (!this.isOnline()) {
+            console.log('Offline mode - data akan disimpan lokal');
+            return false;
+        }
+        
+        try {
+            // Simulasi delay network
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Dalam aplikasi nyata, ini akan POST ke server
+            const syncData = {
+                users: users,
+                timestamp: Date.now(),
+                deviceId: this.getDeviceId()
+            };
+            
+            // Simpan status sync
+            localStorage.setItem('last_sync', Date.now().toString());
+            localStorage.setItem('sync_status', 'synced');
+            
+            // Update sync status di footer
+            this.updateSyncStatus(true);
+            
+            console.log('Data berhasil disinkronisasi');
+            return true;
+        } catch (error) {
+            console.error('Gagal sync:', error);
+            localStorage.setItem('sync_status', 'error');
+            this.updateSyncStatus(false);
+            return false;
+        }
+    },
+    
+    // Dapatkan ID device unik
+    getDeviceId() {
+        let deviceId = localStorage.getItem('flowsync_device_id');
+        if (!deviceId) {
+            deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('flowsync_device_id', deviceId);
+        }
+        return deviceId;
+    },
+    
+    // Update status sync di tampilan
+    updateSyncStatus(success) {
+        const syncStatus = document.getElementById('syncStatus');
+        if (syncStatus) {
+            if (success) {
+                syncStatus.innerHTML = '<i class="fas fa-check-circle"></i> Data tersinkronisasi';
+                syncStatus.style.color = 'var(--success)';
+            } else {
+                syncStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Mode offline';
+                syncStatus.style.color = 'var(--warning)';
+            }
+        }
+    },
+    
+    // Inisialisasi sync system
+    initialize() {
+        // Cek status koneksi
+        this.updateSyncStatus(this.isOnline());
+        
+        // Cek koneksi secara berkala
+        setInterval(() => {
+            this.updateSyncStatus(this.isOnline());
+        }, 30000);
+        
+        // Sync otomatis setiap 5 menit jika online
+        setInterval(async () => {
+            if (this.isOnline() && currentUser) {
+                await this.syncWithServer();
+            }
+        }, 300000);
+        
+        // Listen untuk perubahan koneksi
+        window.addEventListener('online', () => {
+            this.updateSyncStatus(true);
+            showToast('Koneksi internet tersedia', 'success');
+            
+            // Coba sync ketika kembali online
+            setTimeout(async () => {
+                if (currentUser) {
+                    await this.syncWithServer();
+                    showToast('Data berhasil disinkronisasi', 'success');
+                }
+            }, 2000);
+        });
+        
+        window.addEventListener('offline', () => {
+            this.updateSyncStatus(false);
+            showToast('Anda sedang offline', 'warning');
+        });
+        
+        // Sync saat app dimuat jika ada user
+        if (currentUser) {
+            setTimeout(async () => {
+                await this.syncWithServer();
+            }, 3000);
+        }
+    }
+};
 
 // ============ Desktop Notification System ============
 const NotificationManager = {
@@ -318,19 +457,34 @@ const NotificationManager = {
     }
 };
 
-// ============ FlowSyncAPI Implementation ============
+// ============ FlowSyncAPI Implementation with Cloud Sync ============
 const FlowSyncAPI = {
     // Simulate API delay
     delay(ms = 500) {
         return new Promise(resolve => setTimeout(resolve, ms));
     },
 
-    // User Authentication
-    async login(username, password) {
+    // User Authentication dengan Cloud Sync - MODIFIKASI: bisa login dengan username atau email
+    async login(usernameOrEmail, password) {
         await this.delay(800);
         
-        const user = users.find(u => u.username === username && u.password === password);
+        // Coba sync dulu jika online
+        if (CloudSyncManager.isOnline()) {
+            await CloudSyncManager.syncWithServer();
+        }
+        
+        // Cari user berdasarkan username ATAU email
+        const user = users.find(u => 
+            (u.username === usernameOrEmail || u.email === usernameOrEmail) && 
+            u.password === password
+        );
+        
         if (user) {
+            // Update last login
+            user.lastLogin = new Date().toISOString();
+            user.lastDevice = CloudSyncManager.getDeviceId();
+            localStorage.setItem("flowsync_users", JSON.stringify(users));
+            
             return {
                 success: true,
                 user: { ...user },
@@ -339,7 +493,7 @@ const FlowSyncAPI = {
         } else {
             return {
                 success: false,
-                message: "Username atau password salah!"
+                message: "Username/email atau password salah!"
             };
         }
     },
@@ -354,6 +508,14 @@ const FlowSyncAPI = {
                 message: "Username sudah digunakan!"
             };
         }
+        
+        const existingEmail = users.find(u => u.email === userData.email);
+        if (existingEmail) {
+            return {
+                success: false,
+                message: "Email sudah digunakan!"
+            };
+        }
 
         const newUser = {
             id: Date.now(),
@@ -362,15 +524,23 @@ const FlowSyncAPI = {
             name: userData.name,
             email: userData.email,
             phone: userData.phone || "",
+            profileImage: userData.profileImage || null,
             tasks: [],
             projects: [],
             activities: [],
             productivityStats: this.initializeProductivityStats(),
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+            lastDevice: CloudSyncManager.getDeviceId()
         };
 
         users.push(newUser);
         localStorage.setItem("flowsync_users", JSON.stringify(users));
+        
+        // Sync ke cloud jika online
+        if (CloudSyncManager.isOnline()) {
+            await CloudSyncManager.syncWithServer();
+        }
 
         return {
             success: true,
@@ -391,7 +561,7 @@ const FlowSyncAPI = {
             };
         }
         
-        // Generate reset token (sederhana untuk demo)
+        // Generate reset token
         const resetToken = Date.now().toString(36) + Math.random().toString(36).substr(2);
         const resetExpiry = Date.now() + 3600000; // 1 jam dari sekarang
         
@@ -401,8 +571,12 @@ const FlowSyncAPI = {
         
         localStorage.setItem("flowsync_users", JSON.stringify(users));
         
-        // Di aplikasi nyata, di sini akan mengirim email dengan token
-        // Untuk demo, kita simpan token di localStorage untuk simulasi
+        // Sync ke cloud
+        if (CloudSyncManager.isOnline()) {
+            await CloudSyncManager.syncWithServer();
+        }
+        
+        // Simpan token di localStorage untuk simulasi
         localStorage.setItem("reset_token_" + user.id, JSON.stringify({
             token: resetToken,
             userId: user.id,
@@ -421,7 +595,7 @@ const FlowSyncAPI = {
     async verifyResetToken(token) {
         await this.delay(300);
         
-        // Cari token di localStorage (simulasi)
+        // Cari token di localStorage
         for (let user of users) {
             const storedToken = localStorage.getItem("reset_token_" + user.id);
             if (storedToken) {
@@ -471,6 +645,11 @@ const FlowSyncAPI = {
         
         localStorage.setItem("flowsync_users", JSON.stringify(users));
         
+        // Sync ke cloud
+        if (CloudSyncManager.isOnline()) {
+            await CloudSyncManager.syncWithServer();
+        }
+        
         return {
             success: true,
             message: "Password berhasil direset! Silakan login dengan password baru."
@@ -494,7 +673,7 @@ const FlowSyncAPI = {
         };
     },
 
-    // Update productivity stats
+    // Update productivity stats dengan sync
     updateProductivityStats(userId, taskAction) {
         const userIndex = users.findIndex(u => u.id === userId);
         if (userIndex === -1) return;
@@ -522,7 +701,7 @@ const FlowSyncAPI = {
             user.productivityStats.monthly.tasksCreated++;
         }
 
-        // Calculate productivity scores (simple formula)
+        // Calculate productivity scores
         user.productivityStats.weekly.productivityScore = 
             Math.round((user.productivityStats.weekly.tasksCompleted / 
                        Math.max(user.productivityStats.weekly.tasksCreated, 1)) * 100);
@@ -534,6 +713,11 @@ const FlowSyncAPI = {
         user.productivityStats.lastUpdated = now.toISOString();
 
         localStorage.setItem("flowsync_users", JSON.stringify(users));
+        
+        // Sync ke cloud jika online
+        if (CloudSyncManager.isOnline()) {
+            setTimeout(() => CloudSyncManager.syncWithServer(), 1000);
+        }
     },
 
     getWeekNumber(date) {
@@ -542,7 +726,7 @@ const FlowSyncAPI = {
         return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
     },
 
-    // Task Management
+    // Task Management dengan Cloud Sync
     async getTasks(userId) {
         await this.delay(300);
         const user = users.find(u => u.id === userId);
@@ -567,7 +751,8 @@ const FlowSyncAPI = {
             deadline: taskData.deadline || "",
             status: taskData.status || "todo",
             created_at: new Date().toISOString(),
-            completed_at: null
+            completed_at: null,
+            deviceId: CloudSyncManager.getDeviceId()
         };
 
         if (!users[userIndex].tasks) {
@@ -580,6 +765,11 @@ const FlowSyncAPI = {
         this.updateProductivityStats(userId, 'created');
         
         localStorage.setItem("flowsync_users", JSON.stringify(users));
+        
+        // Sync ke cloud
+        if (CloudSyncManager.isOnline()) {
+            await CloudSyncManager.syncWithServer();
+        }
 
         return {
             success: true,
@@ -595,7 +785,12 @@ const FlowSyncAPI = {
             const taskIndex = user.tasks?.findIndex(t => t.id === taskId);
             if (taskIndex !== -1 && taskIndex !== undefined) {
                 const oldStatus = user.tasks[taskIndex].status;
-                user.tasks[taskIndex] = { ...user.tasks[taskIndex], ...updateData };
+                user.tasks[taskIndex] = { 
+                    ...user.tasks[taskIndex], 
+                    ...updateData,
+                    lastModified: new Date().toISOString(),
+                    modifiedBy: CloudSyncManager.getDeviceId()
+                };
                 
                 // Update productivity stats if task was completed
                 if (updateData.status === 'done' && oldStatus !== 'done') {
@@ -604,6 +799,12 @@ const FlowSyncAPI = {
                 }
                 
                 localStorage.setItem("flowsync_users", JSON.stringify(users));
+                
+                // Sync ke cloud
+                if (CloudSyncManager.isOnline()) {
+                    await CloudSyncManager.syncWithServer();
+                }
+                
                 return {
                     success: true,
                     task: user.tasks[taskIndex],
@@ -623,6 +824,12 @@ const FlowSyncAPI = {
             if (taskIndex !== -1 && taskIndex !== undefined) {
                 user.tasks.splice(taskIndex, 1);
                 localStorage.setItem("flowsync_users", JSON.stringify(users));
+                
+                // Sync ke cloud
+                if (CloudSyncManager.isOnline()) {
+                    await CloudSyncManager.syncWithServer();
+                }
+                
                 return {
                     success: true,
                     message: "Tugas berhasil dihapus!"
@@ -633,7 +840,7 @@ const FlowSyncAPI = {
         return { success: false, message: "Tugas tidak ditemukan!" };
     },
 
-    // Project Management
+    // Project Management dengan Cloud Sync
     async getProjects(userId) {
         await this.delay(300);
         const user = users.find(u => u.id === userId);
@@ -657,7 +864,8 @@ const FlowSyncAPI = {
             description: projectData.description || "",
             deadline: projectData.deadline || "",
             status: "active",
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            deviceId: CloudSyncManager.getDeviceId()
         };
 
         if (!users[userIndex].projects) {
@@ -666,6 +874,11 @@ const FlowSyncAPI = {
 
         users[userIndex].projects.push(newProject);
         localStorage.setItem("flowsync_users", JSON.stringify(users));
+        
+        // Sync ke cloud
+        if (CloudSyncManager.isOnline()) {
+            await CloudSyncManager.syncWithServer();
+        }
 
         return {
             success: true,
@@ -680,8 +893,18 @@ const FlowSyncAPI = {
         for (let user of users) {
             const projectIndex = user.projects?.findIndex(p => p.id === projectId);
             if (projectIndex !== -1 && projectIndex !== undefined) {
-                user.projects[projectIndex] = { ...user.projects[projectIndex], ...updateData };
+                user.projects[projectIndex] = { 
+                    ...user.projects[projectIndex], 
+                    ...updateData,
+                    lastModified: new Date().toISOString()
+                };
                 localStorage.setItem("flowsync_users", JSON.stringify(users));
+                
+                // Sync ke cloud
+                if (CloudSyncManager.isOnline()) {
+                    await CloudSyncManager.syncWithServer();
+                }
+                
                 return {
                     success: true,
                     project: user.projects[projectIndex],
@@ -701,6 +924,12 @@ const FlowSyncAPI = {
             if (projectIndex !== -1 && projectIndex !== undefined) {
                 user.projects.splice(projectIndex, 1);
                 localStorage.setItem("flowsync_users", JSON.stringify(users));
+                
+                // Sync ke cloud
+                if (CloudSyncManager.isOnline()) {
+                    await CloudSyncManager.syncWithServer();
+                }
+                
                 return {
                     success: true,
                     message: "Proyek berhasil dihapus!"
@@ -711,7 +940,7 @@ const FlowSyncAPI = {
         return { success: false, message: "Proyek tidak ditemukan!" };
     },
 
-    // Profile Management
+    // Profile Management dengan Cloud Sync
     async updateProfile(userId, profileData) {
         await this.delay(600);
         
@@ -722,10 +951,16 @@ const FlowSyncAPI = {
 
         users[userIndex] = { 
             ...users[userIndex], 
-            ...profileData 
+            ...profileData,
+            lastModified: new Date().toISOString()
         };
 
         localStorage.setItem("flowsync_users", JSON.stringify(users));
+        
+        // Sync ke cloud
+        if (CloudSyncManager.isOnline()) {
+            await CloudSyncManager.syncWithServer();
+        }
 
         return {
             success: true,
@@ -894,7 +1129,8 @@ const ActivityManager = {
             id: Date.now(),
             type: type,
             title: title,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            deviceId: CloudSyncManager.getDeviceId()
         };
         
         currentUser.activities.unshift(activity);
@@ -910,6 +1146,11 @@ const ActivityManager = {
         }
         
         localStorage.setItem("currentUser", JSON.stringify(currentUser));
+        
+        // Sync ke cloud
+        if (CloudSyncManager.isOnline()) {
+            setTimeout(() => CloudSyncManager.syncWithServer(), 1000);
+        }
         
         if (document.getElementById('notifList')) {
             this.renderActivities();
@@ -1021,11 +1262,11 @@ const DeadlineManager = {
         
         return `
             <div class="deadline-warning">
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 1.2rem;"></i>
-                    <strong style="font-size: 1rem;">Deadline Mendekat!</strong>
+                <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.8rem;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 1.4rem;"></i>
+                    <strong style="font-size: 1.1rem;">Deadline Mendekat!</strong>
                 </div>
-                <div style="font-size: 0.9rem;">
+                <div style="font-size: 1rem;">
                     ${upcomingDeadlines.length} tugas mendekati deadline. Ayo kerjakan!
                 </div>
             </div>
@@ -1067,7 +1308,7 @@ async function handleLogin() {
     const btn = document.getElementById("btnLogin");
 
     if (!u || !p) {
-        msg.textContent = "Username dan password harus diisi!";
+        msg.textContent = "Username/email dan password harus diisi!";
         return;
     }
 
@@ -1089,6 +1330,9 @@ async function handleLogin() {
             
             // Inisialisasi notifikasi setelah login
             NotificationManager.initialize();
+            
+            // Inisialisasi cloud sync
+            CloudSyncManager.initialize();
             
             // Tampilkan notifikasi deadline jika ada
             setTimeout(() => {
@@ -1141,6 +1385,10 @@ async function handleRegister() {
             
             msg.textContent = "";
             showToast(`Registrasi berhasil! Selamat datang, ${currentUser.name}!`, "success");
+            
+            // Inisialisasi cloud sync
+            CloudSyncManager.initialize();
+            
             renderApp();
         } else {
             msg.textContent = result.message || "Registrasi gagal!";
@@ -1277,6 +1525,123 @@ function fillExample() {
     document.getElementById("regEmail").value = "john@example.com";
 }
 
+// ============ Profile Image Management ============
+function openImagePicker() {
+    document.getElementById('profileImageInput').click();
+}
+
+function openCamera() {
+    // Cek apakah browser mendukung getUserMedia
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showToast("Kamera tidak didukung di browser ini", "error");
+        return;
+    }
+    
+    // Minta izin akses kamera
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(function(stream) {
+            // Buat modal untuk menampilkan kamera
+            const cameraModal = document.createElement('div');
+            cameraModal.className = 'modal show';
+            cameraModal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-camera"></i> Ambil Foto</h3>
+                        <button class="modal-close" onclick="this.closest('.modal').remove(); stopCamera();">&times;</button>
+                    </div>
+                    <div style="text-align: center;">
+                        <video id="cameraPreview" autoplay style="width: 100%; max-width: 400px; border-radius: 10px; margin-bottom: 1rem;"></video>
+                        <div style="display: flex; gap: 1rem;">
+                            <button class="btn" onclick="capturePhoto()" style="flex: 1;">
+                                <i class="fas fa-camera"></i> Ambil Foto
+                            </button>
+                            <button class="btn-secondary" onclick="this.closest('.modal').remove(); stopCamera();" style="flex: 1;">
+                                <i class="fas fa-times"></i> Batal
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(cameraModal);
+            
+            // Tampilkan video stream dari kamera
+            const video = document.getElementById('cameraPreview');
+            video.srcObject = stream;
+            
+            // Simpan stream untuk dihentikan nanti
+            window.cameraStream = stream;
+        })
+        .catch(function(error) {
+            showToast("Tidak dapat mengakses kamera: " + error.message, "error");
+        });
+}
+
+function stopCamera() {
+    if (window.cameraStream) {
+        window.cameraStream.getTracks().forEach(track => track.stop());
+        window.cameraStream = null;
+    }
+}
+
+function capturePhoto() {
+    const video = document.getElementById('cameraPreview');
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    
+    // Gambar frame video ke canvas
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Konversi ke data URL
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+    
+    // Set gambar profil
+    setProfileImage(imageData);
+    
+    // Hentikan kamera dan tutup modal
+    stopCamera();
+    document.querySelector('.modal.show').remove();
+}
+
+function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Validasi tipe file
+    if (!file.type.match('image.*')) {
+        showToast("Hanya file gambar yang diizinkan", "error");
+        return;
+    }
+    
+    // Validasi ukuran file (maks 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showToast("Ukuran gambar maksimal 5MB", "error");
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const imageData = e.target.result;
+        setProfileImage(imageData);
+    };
+    reader.readAsDataURL(file);
+}
+
+function setProfileImage(imageData) {
+    // Tampilkan preview
+    const preview = document.getElementById('profileImageDisplay');
+    const placeholder = document.getElementById('profileImagePlaceholder');
+    
+    preview.src = imageData;
+    preview.classList.add('active');
+    placeholder.classList.add('hidden');
+    
+    // Simpan data gambar
+    document.getElementById('profileImageData').value = imageData;
+}
+
 // ============ Task Management Functions ============
 async function addTask() {
     const title = document.getElementById("taskTitle").value.trim();
@@ -1398,6 +1763,7 @@ function editTask(taskId) {
     if (taskIndex === -1) return;
     
     const task = currentUser.tasks[taskIndex];
+    const isMobile = window.innerWidth <= 768;
     
     // Buat modal edit
     const modal = document.createElement('div');
@@ -1405,35 +1771,41 @@ function editTask(taskId) {
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i class="fas fa-edit"></i> Edit Tugas</h3>
+                <h3 style="font-size: ${isMobile ? '1.2rem' : '1.4rem'};">
+                    <i class="fas fa-edit"></i> Edit Tugas
+                </h3>
                 <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
             </div>
+            
             <div class="input-group">
                 <i class="fas fa-pencil-alt"></i>
-                <input type="text" id="editTaskTitle" class="input" value="${task.title}" placeholder="Judul Tugas">
+                <input type="text" id="editTaskTitle" class="input" value="${task.title}" placeholder="Judul Tugas" style="font-size: 16px;">
             </div>
+            
             <div class="input-group">
-                <label style="display: block; margin-bottom: 0.3rem; color: var(--gray); font-size: 0.8rem; padding-left: 2.5rem;">Tanggal Deadline</label>
                 <i class="fas fa-calendar"></i>
-                <input type="date" id="editTaskDeadline" class="input" value="${task.deadline || ''}" placeholder="Tanggal Deadline">
+                <input type="date" id="editTaskDeadline" class="input" value="${task.deadline || ''}" placeholder="Tanggal Deadline" style="font-size: 16px;">
             </div>
+            
             <div class="input-group">
                 <i class="fas fa-align-left"></i>
-                <textarea id="editTaskDesc" class="input" placeholder="Deskripsi Tugas" style="min-height: 100px;">${task.description || ''}</textarea>
+                <textarea id="editTaskDesc" class="input" placeholder="Deskripsi Tugas" style="min-height: ${isMobile ? '100px' : '120px'}; font-size: 16px; padding-top: 1rem;">${task.description || ''}</textarea>
             </div>
+            
             <div class="input-group">
                 <i class="fas fa-tag"></i>
-                <select id="editTaskStatus" class="input">
+                <select id="editTaskStatus" class="input" style="font-size: 16px; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%236b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>'); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1rem;">
                     <option value="todo" ${task.status === 'todo' ? 'selected' : ''}>Belum Dikerjakan</option>
                     <option value="inprogress" ${task.status === 'inprogress' ? 'selected' : ''}>Sedang Dikerjakan</option>
                     <option value="done" ${task.status === 'done' ? 'selected' : ''}>Selesai</option>
                 </select>
             </div>
-            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                <button class="btn" onclick="saveTaskEdit(${task.id})" style="flex: 1;">
+            
+            <div style="display: flex; ${isMobile ? 'flex-direction: column;' : ''} gap: ${isMobile ? '0.6rem' : '0.8rem'}; margin-top: 1.5rem;">
+                <button class="btn" onclick="saveTaskEdit(${task.id})" style="${isMobile ? 'width: 100%;' : 'flex: 1;'} padding: ${isMobile ? '0.9rem' : '1rem'}; font-size: ${isMobile ? '1rem' : '1.05rem'}; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 0.6rem;">
                     <i class="fas fa-save"></i> Simpan Perubahan
                 </button>
-                <button class="btn-secondary" onclick="this.closest('.modal').remove()" style="flex: 1;">
+                <button class="btn-secondary" onclick="this.closest('.modal').remove()" style="${isMobile ? 'width: 100%;' : 'flex: 1;'} padding: ${isMobile ? '0.9rem' : '1rem'}; font-size: ${isMobile ? '1rem' : '1.05rem'}; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 0.6rem;">
                     <i class="fas fa-times"></i> Batal
                 </button>
             </div>
@@ -1441,6 +1813,22 @@ function editTask(taskId) {
     `;
     
     document.body.appendChild(modal);
+    
+    // Inisialisasi date input dengan tanggal minimum hari ini
+    const today = new Date().toISOString().split('T')[0];
+    const dateInput = document.getElementById('editTaskDeadline');
+    if (dateInput) {
+        dateInput.min = today;
+    }
+    
+    // Auto-focus ke judul tugas untuk kemudahan pengeditan
+    setTimeout(() => {
+        const titleInput = document.getElementById('editTaskTitle');
+        if (titleInput) {
+            titleInput.focus();
+            titleInput.select();
+        }
+    }, 100);
 }
 
 async function saveTaskEdit(taskId) {
@@ -1557,6 +1945,23 @@ function openProfileModal() {
     document.getElementById('editName').value = currentUser.name || '';
     document.getElementById('editEmail').value = currentUser.email || '';
     document.getElementById('editPhone').value = currentUser.phone || '';
+    
+    // Set gambar profil jika ada
+    const preview = document.getElementById('profileImageDisplay');
+    const placeholder = document.getElementById('profileImagePlaceholder');
+    
+    if (currentUser.profileImage) {
+        preview.src = currentUser.profileImage;
+        preview.classList.add('active');
+        placeholder.classList.add('hidden');
+        document.getElementById('profileImageData').value = currentUser.profileImage;
+    } else {
+        preview.src = '';
+        preview.classList.remove('active');
+        placeholder.classList.remove('hidden');
+        document.getElementById('profileImageData').value = '';
+    }
+    
     document.getElementById('profileModal').classList.add('show');
 }
 
@@ -1568,6 +1973,7 @@ async function saveProfile() {
     const name = document.getElementById('editName').value.trim();
     const email = document.getElementById('editEmail').value.trim();
     const phone = document.getElementById('editPhone').value.trim();
+    const profileImage = document.getElementById('profileImageData').value;
 
     if (!name) {
         showToast("Nama tidak boleh kosong!", "error");
@@ -1578,7 +1984,8 @@ async function saveProfile() {
         const result = await FlowSyncAPI.updateProfile(currentUser.id, {
             name: name,
             email: email,
-            phone: phone
+            phone: phone,
+            profileImage: profileImage || null
         });
 
         if (result.success) {
@@ -1711,15 +2118,24 @@ function renderUserProfile() {
     if (!userProfile) return;
 
     if (currentUser) {
+        const isMobile = window.innerWidth <= 768;
+        const avatarContent = currentUser.profileImage 
+            ? `<img src="${currentUser.profileImage}" alt="${currentUser.name}">`
+            : currentUser.name[0].toUpperCase();
+        
         userProfile.innerHTML = `
             <div class="user-dropdown">
-                <div class="user-profile" onclick="toggleUserMenu()">
-                    <div class="user-avatar">${currentUser.name[0].toUpperCase()}</div>
+                <div class="user-profile ${isMobile ? 'mobile-view' : ''}" onclick="toggleUserMenu()">
+                    <div class="user-avatar">
+                        ${avatarContent}
+                    </div>
+                    ${!isMobile ? `
                     <div class="user-info">
                         <div class="user-name">${currentUser.name}</div>
                         <div class="user-username">@${currentUser.username}</div>
                     </div>
                     <i class="fas fa-chevron-down"></i>
+                    ` : ''}
                 </div>
                 <div class="user-menu" id="userMenu">
                     <button onclick="openProfileModal()">
@@ -1747,15 +2163,21 @@ function toggleUserMenu() {
 }
 
 function toggleSidebar() {
-    if (window.innerWidth <= 768) {
+    if (window.innerWidth <= 992) {
         // Mode mobile - toggle sidebar dengan overlay
         const sidebar = document.querySelector('.sidebar');
         const overlay = document.querySelector('.sidebar-overlay');
         
-        sidebar.classList.toggle('mobile-open');
-        if (overlay) {
-            overlay.classList.toggle('active');
+        if (!overlay) {
+            // Buat overlay jika belum ada
+            const newOverlay = document.createElement('div');
+            newOverlay.className = 'sidebar-overlay';
+            newOverlay.onclick = closeMobileSidebar;
+            document.body.appendChild(newOverlay);
         }
+        
+        sidebar.classList.toggle('mobile-open');
+        document.querySelector('.sidebar-overlay').classList.toggle('active');
     } else {
         // Mode desktop - behavior lama
         sidebarCollapsed = !sidebarCollapsed;
@@ -1793,10 +2215,15 @@ function switchTab(tab) {
     setTimeout(initPasswordToggles, 50);
 }
 
+// MODIFIKASI 1: Fungsi showView dengan highlight sidebar
 function showView(view) {
+    currentView = view; // Simpan view saat ini
     const viewEl = document.getElementById("view");
     if (!viewEl) return;
 
+    // Update active class pada sidebar buttons
+    updateSidebarActiveState(view);
+    
     switch (view) {
         case "dashboard":
             renderDashboard(viewEl);
@@ -1812,6 +2239,20 @@ function showView(view) {
             break;
         default:
             renderDashboard(viewEl);
+    }
+}
+
+// Fungsi untuk update active state sidebar
+function updateSidebarActiveState(view) {
+    const sidebarButtons = document.querySelectorAll('.sidebar .btn-secondary');
+    sidebarButtons.forEach(button => {
+        button.classList.remove('active');
+    });
+    
+    // Tambah active class berdasarkan view
+    const activeButton = document.querySelector(`.sidebar .btn-secondary[onclick*="${view}"]`);
+    if (activeButton) {
+        activeButton.classList.add('active');
     }
 }
 
@@ -1843,26 +2284,26 @@ function renderDashboard(container) {
     container.innerHTML = `
         <div class="card">
             <h2><i class="fas fa-tachometer-alt"></i> Dashboard</h2>
-            <p class="mb-3">Selamat datang kembali, ${currentUser.name}! 👋</p>
+            <p class="mb-3" style="font-size: 1.1rem; color: var(--gray);">Selamat datang kembali, ${currentUser.name}! 👋</p>
             
             ${DeadlineManager.renderDeadlineWarning()}
         </div>
 
         <!-- High Priority Tasks -->
         ${highPriorityTasks.length > 0 ? `
-            <div class="card" style="border-left: 4px solid var(--warning);">
-                <div style="display: flex; align-items: center; gap: 0.8rem;">
+            <div class="card" style="border-left: 5px solid var(--warning);">
+                <div style="display: flex; align-items: center; gap: 1rem;">
                     <div class="notification-icon" style="background: #fef3c7;">
-                        <i class="fas fa-exclamation" style="color: #d97706;"></i>
+                        <i class="fas fa-exclamation" style="color: #d97706; font-size: 1.3rem;"></i>
                     </div>
                     <div>
-                        <h4 style="margin: 0 0 0.2rem 0; color: var(--warning);">Tugas Prioritas Tinggi</h4>
-                        <p style="margin: 0; font-size: 0.9rem;">
+                        <h4 style="margin: 0 0 0.3rem 0; color: var(--warning); font-size: 1.2rem;">Tugas Prioritas Tinggi</h4>
+                        <p style="margin: 0; font-size: 1rem; color: var(--gray);">
                             ${highPriorityTasks.length} tugas deadline dalam 3 hari
                         </p>
                     </div>
                 </div>
-                <button class="btn" onclick="showView('tasks')" style="margin-top: 1rem; width: 100%; padding: 0.8rem; background: var(--warning);">
+                <button class="btn" onclick="showView('tasks')" style="margin-top: 1.2rem; width: 100%; padding: 1rem; background: var(--warning); font-size: 1rem;">
                     <i class="fas fa-exclamation-circle"></i> Segera Kerjakan
                 </button>
             </div>
@@ -1871,18 +2312,18 @@ function renderDashboard(container) {
         <!-- Overdue Tasks Warning -->
         ${overdueTasks.length > 0 ? `
             <div class="card overdue-notification">
-                <div style="display: flex; align-items: center; gap: 0.8rem;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
                     <div class="notification-icon" style="background: #fee2e2;">
-                        <i class="fas fa-exclamation-triangle" style="color: #dc2626;"></i>
+                        <i class="fas fa-exclamation-triangle" style="color: #dc2626; font-size: 1.3rem;"></i>
                     </div>
                     <div>
-                        <h4 style="margin: 0 0 0.2rem 0; color: var(--danger);">Tugas Terlambat!</h4>
-                        <p style="margin: 0; font-size: 0.9rem;">
+                        <h4 style="margin: 0 0 0.3rem 0; color: var(--danger); font-size: 1.2rem;">Tugas Terlambat!</h4>
+                        <p style="margin: 0; font-size: 1rem; color: var(--gray);">
                             ${overdueTasks.length} tugas sudah melewati deadline
                         </p>
                     </div>
                 </div>
-                <button class="btn" onclick="showView('tasks')" style="margin-top: 1rem; width: 100%; padding: 0.8rem; background: var(--danger);">
+                <button class="btn" onclick="showView('tasks')" style="margin-top: 1.2rem; width: 100%; padding: 1rem; background: var(--danger); font-size: 1rem;">
                     <i class="fas fa-exclamation-circle"></i> Segera Selesaikan
                 </button>
             </div>
@@ -1916,28 +2357,29 @@ function renderDashboard(container) {
             <div class="progress-circle" style="--deg: ${progressPercentage * 3.6}deg">
                 <span>${progressPercentage}%</span>
             </div>
-            <p style="text-align: center;">${doneCount} dari ${totalTasks} tugas selesai</p>
+            <p style="text-align: center; font-size: 1.1rem; color: var(--gray); margin-top: 1rem;">${doneCount} dari ${totalTasks} tugas selesai</p>
         </div>
 
         <!-- Daily Motivation -->
         <div class="card motivation-card">
-            <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1.2rem;">
                 <div class="notification-icon" style="background: rgba(79, 70, 229, 0.1);">
-                    <i class="fas fa-fire" style="color: var(--primary); font-size: 1.2rem;"></i>
+                    <i class="fas fa-fire" style="color: var(--primary); font-size: 1.4rem;"></i>
                 </div>
                 <div>
-                    <h3 style="margin: 0; color: var(--primary);">💡 Motivasi Hari Ini</h3>
-                    <p style="margin: 0.3rem 0 0 0; color: var(--gray);" id="dailyMotivation">
+                    <h3 style="margin: 0; color: var(--primary); font-size: 1.3rem;">💡 Motivasi Hari Ini</h3>
+                    <p style="margin: 0.5rem 0 0 0; color: var(--gray); font-size: 1.1rem; line-height: 1.6;" id="dailyMotivation">
                         "Produktivitas bukan tentang melakukan lebih banyak, tapi tentang melakukan yang penting."
                     </p>
                 </div>
             </div>
-            <button class="btn-secondary" onclick="showNewMotivation()" style="margin-top: 1rem; background: var(--card-bg); color: var(--primary); border: 1px solid var(--primary);">
+            <button class="btn-secondary" onclick="showNewMotivation()" style="margin-top: 1.5rem; background: var(--card-bg); color: var(--primary); border: 2px solid var(--primary); padding: 0.8rem; font-size: 1rem;">
                 <i class="fas fa-sync-alt"></i> Motivasi Lainnya
             </button>
         </div>
 
         <div class="dashboard-grid">
+            <!-- Tugas Terbaru - REVISI DENGAN GARIS BIRU YANG TIDAK TABRAKAN -->
             <div class="card">
                 <h3><i class="fas fa-list-ul"></i> Tugas Terbaru</h3>
                 ${currentUser.tasks && currentUser.tasks.length > 0 ? 
@@ -1947,152 +2389,255 @@ function renderDashboard(container) {
                         const isDueSoon = task.deadline && !isOverdue && !isDueToday && 
                                           new Date(task.deadline) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
                         
+                        // Tentukan class untuk deadline text
+                        let deadlineClass = '';
+                        if (isOverdue) deadlineClass = 'overdue';
+                        else if (isDueToday) deadlineClass = 'today';
+                        else if (isDueSoon) deadlineClass = 'soon';
+                        
                         return `
-                        <div class="task-item ${isOverdue ? 'overdue-task' : isDueToday ? 'due-today-task' : isDueSoon ? 'due-soon-task' : ''}">
-                            <strong style="color: var(--dark);">${task.title}</strong>
-                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--gray); margin-top: 0.3rem;">
-                                <span class="status-badge ${task.status}">${getStatusText(task.status)}</span>
-                                ${task.deadline ? `
-                                    <span style="${isOverdue ? 'color: var(--danger);' : isDueToday ? 'color: var(--warning);' : isDueSoon ? 'color: var(--info);' : ''}">
-                                        <i class="fas fa-calendar${isOverdue ? '-times' : ''}"></i> 
-                                        ${formatDate(task.deadline)}
-                                        ${isOverdue ? ' (Terlambat)' : ''}
-                                    </span>
-                                ` : ''}
+                        <div class="dashboard-task-item">
+                            <div style="position: relative; z-index: 2;">
+                                <strong style="color: var(--dark); font-size: 1.1rem; display: block; margin-bottom: 0.5rem;">${task.title}</strong>
+                                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.8rem; align-items: center;">
+                                    <span class="status-badge ${task.status}">${getStatusText(task.status)}</span>
+                                    ${task.deadline ? `
+                                        <span class="deadline-text ${deadlineClass}">
+                                            <i class="fas fa-calendar${isOverdue ? '-times' : ''}"></i> 
+                                            ${formatDate(task.deadline)}
+                                        </span>
+                                    ` : ''}
+                                </div>
                             </div>
                         </div>
                     `}).join('') : 
-                    '<p style="text-align: center; color: var(--gray); padding: var(--spacing-md);">Belum ada tugas</p>'
+                    '<p style="text-align: center; color: var(--gray); padding: var(--spacing-md); font-size: 1.1rem;">Belum ada tugas</p>'
                 }
             </div>
 
+            <!-- Proyek Aktif - REVISI DENGAN GARIS BIRU YANG TIDAK TABRAKAN -->
             <div class="card">
                 <h3><i class="fas fa-project-diagram"></i> Proyek Aktif</h3>
                 ${currentUser.projects && currentUser.projects.length > 0 ? 
-                    currentUser.projects.slice(0, 5).map(project => `
-                        <div class="project-item">
-                            <strong style="color: var(--dark);">${project.title}</strong>
-                            <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.3rem;">
-                                ${project.deadline ? `Deadline: ${formatDate(project.deadline)}` : 'Tidak ada deadline'}
+                    currentUser.projects.slice(0, 5).map(project => {
+                        const isOverdue = project.deadline && new Date(project.deadline) < new Date();
+                        const isDueToday = project.deadline && new Date(project.deadline).toDateString() === new Date().toDateString();
+                        const isDueSoon = project.deadline && !isOverdue && !isDueToday && 
+                                         new Date(project.deadline) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+                        
+                        // Tentukan class untuk deadline text
+                        let deadlineClass = '';
+                        if (isOverdue) deadlineClass = 'overdue';
+                        else if (isDueToday) deadlineClass = 'today';
+                        else if (isDueSoon) deadlineClass = 'soon';
+                        
+                        return `
+                        <div class="dashboard-project-item">
+                            <div style="position: relative; z-index: 2;">
+                                <strong style="color: var(--dark); font-size: 1.1rem; display: block; margin-bottom: 0.5rem;">${project.title}</strong>
+                                ${project.deadline ? `
+                                    <div class="deadline-text ${deadlineClass}">
+                                        <i class="fas fa-calendar${isOverdue ? '-times' : ''}"></i> 
+                                        Deadline: ${formatDate(project.deadline)}
+                                    </div>
+                                ` : '<div style="font-size: 0.95rem; color: var(--gray);">Tidak ada deadline</div>'}
                             </div>
                         </div>
-                    `).join('') : 
-                    '<p style="text-align: center; color: var(--gray); padding: var(--spacing-md);">Belum ada proyek</p>'
+                    `}).join('') : 
+                    '<p style="text-align: center; color: var(--gray); padding: var(--spacing-md); font-size: 1.1rem;">Belum ada proyek</p>'
                 }
             </div>
         </div>
     `;
 }
 
+// MODIFIKASI 4: Form tampilan menu tugas disamakan dengan menu proyek
 function renderTasks(container) {
     const filteredTasks = currentUser.tasks?.filter(task => {
         if (currentTaskFilter === 'all') return true;
         return task.status === currentTaskFilter;
     }) || [];
 
+    const isMobile = window.innerWidth <= 768;
+    
     container.innerHTML = `
-        <div class="card">
-            <h2><i class="fas fa-tasks"></i> Manajemen Tugas</h2>
+        <div class="card" style="max-width: 1200px; margin: 0 auto; width: 100%;">
+            <!-- HEADER TERPUSAT -->
+            <div style="text-align: center; margin-bottom: var(--spacing-lg); padding-bottom: var(--spacing-md); border-bottom: 2px solid var(--border);">
+                <h2 style="font-size: ${isMobile ? '1.5rem' : '1.8rem'}; color: var(--dark); margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.8rem;">
+                    <i class="fas fa-tasks"></i> Manajemen Tugas
+                </h2>
+                <p style="color: var(--gray); font-size: ${isMobile ? '1rem' : '1.1rem'}; max-width: 600px; margin: 0 auto; line-height: 1.6;">
+                    Kelola dan pantau semua tugas Anda di satu tempat
+                </p>
+            </div>
             
-            <div class="task-status-tabs">
-                <button class="task-status-tab ${currentTaskFilter === 'all' ? 'active' : ''}" onclick="setTaskFilter('all')">
+            <!-- TABS FILTER STATUS TERPUSAT -->
+            <div style="display: flex; justify-content: center; gap: ${isMobile ? '0.4rem' : 'var(--spacing-xs)'}; margin-bottom: var(--spacing-lg); flex-wrap: wrap; padding: ${isMobile ? '0.5rem' : '0'};">
+                <button class="task-status-tab ${currentTaskFilter === 'all' ? 'active' : ''}" onclick="setTaskFilter('all')" style="${isMobile ? 'min-width: 70px; padding: 0.7rem 0.4rem; font-size: 0.85rem;' : ''}">
                     <i class="fas fa-list"></i> Semua
                 </button>
-                <button class="task-status-tab todo ${currentTaskFilter === 'todo' ? 'active' : ''}" onclick="setTaskFilter('todo')">
+                <button class="task-status-tab todo ${currentTaskFilter === 'todo' ? 'active' : ''}" onclick="setTaskFilter('todo')" style="${isMobile ? 'min-width: 70px; padding: 0.7rem 0.4rem; font-size: 0.85rem;' : ''}">
                     <i class="fas fa-clock"></i> Belum
                 </button>
-                <button class="task-status-tab inprogress ${currentTaskFilter === 'inprogress' ? 'active' : ''}" onclick="setTaskFilter('inprogress')">
+                <button class="task-status-tab inprogress ${currentTaskFilter === 'inprogress' ? 'active' : ''}" onclick="setTaskFilter('inprogress')" style="${isMobile ? 'min-width: 70px; padding: 0.7rem 0.4rem; font-size: 0.85rem;' : ''}">
                     <i class="fas fa-spinner"></i> Sedang
                 </button>
-                <button class="task-status-tab done ${currentTaskFilter === 'done' ? 'active' : ''}" onclick="setTaskFilter('done')">
+                <button class="task-status-tab done ${currentTaskFilter === 'done' ? 'active' : ''}" onclick="setTaskFilter('done')" style="${isMobile ? 'min-width: 70px; padding: 0.7rem 0.4rem; font-size: 0.85rem;' : ''}">
                     <i class="fas fa-check"></i> Selesai
                 </button>
             </div>
 
-            <div style="background: var(--card-bg); padding: var(--spacing-lg); border-radius: 12px; margin-bottom: var(--spacing-md);">
-                <h3><i class="fas fa-plus"></i> Tambah Tugas Baru</h3>
+            <!-- FORM TAMBAH TUGAS TERPUSAT -->
+            <div class="task-form-container" style="max-width: 700px; margin: 0 auto var(--spacing-lg) auto; padding: ${isMobile ? '1.2rem' : 'var(--spacing-lg)'}; background: var(--card-bg); border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);">
+                <h3 style="margin-bottom: ${isMobile ? '1.2rem' : '1.5rem'}; font-size: ${isMobile ? '1.2rem' : '1.4rem'}; color: var(--dark); text-align: center;">
+                    <i class="fas fa-plus"></i> Tambah Tugas Baru
+                </h3>
                 <div class="input-group">
                     <i class="fas fa-pencil-alt"></i>
-                    <input type="text" id="taskTitle" class="input" placeholder="Judul Tugas">
+                    <input type="text" id="taskTitle" class="input" placeholder="Judul Tugas" style="font-size: 16px;">
                 </div>
                 <div class="input-group">
-                    <label style="display: block; margin-bottom: 0.3rem; color: var(--gray); font-size: 0.8rem; padding-left: 2.5rem;">Tanggal Deadline</label>
                     <i class="fas fa-calendar"></i>
-                    <input type="date" id="taskDeadline" class="input" placeholder="Tanggal Deadline">
+                    <input type="date" id="taskDeadline" class="input" placeholder="Tanggal Deadline" style="font-size: 16px;">
                 </div>
                 <div class="input-group">
                     <i class="fas fa-align-left"></i>
-                    <textarea id="taskDesc" class="input" placeholder="Deskripsi Tugas" style="min-height: 80px; resize: vertical;"></textarea>
+                    <textarea id="taskDesc" class="input" placeholder="Deskripsi Tugas" style="min-height: ${isMobile ? '100px' : '120px'}; resize: vertical; font-size: 16px; font-family: 'Poppins', sans-serif; padding-top: 1rem;"></textarea>
                 </div>
                 <div class="input-group">
                     <i class="fas fa-tag"></i>
-                    <select id="taskStatus" class="input">
+                    <select id="taskStatus" class="input" style="font-size: 16px; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%236b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>'); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1rem;">
                         <option value="todo">Belum Dikerjakan</option>
                         <option value="inprogress">Sedang Dikerjakan</option>
                         <option value="done">Selesai</option>
                     </select>
                 </div>
-                <button class="btn" onclick="addTask()">
+                <button class="btn" onclick="addTask()" style="font-size: ${isMobile ? '1rem' : '1.05rem'}; padding: ${isMobile ? '0.9rem' : '1rem'}; margin-top: 0.5rem; border-radius: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.8rem; width: 100%;">
                     <i class="fas fa-plus"></i> Tambah Tugas
                 </button>
             </div>
 
-            <h3>Daftar Tugas (${filteredTasks.length})</h3>
+            <!-- HEADER DAFTAR TUGAS TERPUSAT -->
+            <div style="text-align: center; margin: ${isMobile ? '2rem 0 1.5rem 0' : '2.5rem 0 1.5rem 0'};">
+                <h3 style="font-size: ${isMobile ? '1.3rem' : '1.5rem'}; color: var(--dark); display: inline-block; padding: 0.8rem 1.5rem; background: var(--card-bg); border-radius: 12px; border: 2px solid var(--border); box-shadow: 0 3px 10px rgba(0,0,0,0.05);">
+                    Daftar Tugas (${filteredTasks.length})
+                </h3>
+            </div>
+            
+            <!-- LIST TUGAS TERPUSAT -->
+            <div style="display: flex; flex-direction: column; align-items: center; gap: var(--spacing-md); max-width: 800px; margin: 0 auto;">
             ${filteredTasks.length > 0 ? 
                 filteredTasks.map((task) => {
-                    // Cari index asli di array tasks untuk referensi yang benar
-                    const originalIndex = currentUser.tasks.findIndex(t => t.id === task.id);
+                    const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== 'done';
+                    const isDueToday = task.deadline && new Date(task.deadline).toDateString() === new Date().toDateString();
+                    const isDueSoon = task.deadline && !isOverdue && !isDueToday && 
+                                      new Date(task.deadline) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+                    
+                    let deadlineColor = 'var(--gray)';
+                    let deadlineClass = '';
+                    let deadlineBg = 'rgba(0,0,0,0.03)';
+                    if (isOverdue) {
+                        deadlineColor = 'var(--danger)';
+                        deadlineClass = 'overdue';
+                        deadlineBg = 'rgba(239, 68, 68, 0.1)';
+                    } else if (isDueToday) {
+                        deadlineColor = 'var(--warning)';
+                        deadlineClass = 'today';
+                        deadlineBg = 'rgba(245, 158, 11, 0.1)';
+                    } else if (isDueSoon) {
+                        deadlineColor = 'var(--info)';
+                        deadlineClass = 'soon';
+                        deadlineBg = 'rgba(6, 182, 212, 0.1)';
+                    }
                     
                     return `
-                    <div class="task-card">
-                        <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 1rem;">
-                            <div style="flex: 1; min-width: 250px;">
-                                <h4 style="margin: 0 0 0.5rem 0; color: var(--dark);">${task.title}</h4>
-                                ${task.description ? `<p style="margin: 0 0 0.8rem 0; color: var(--gray); line-height: 1.4;">${task.description}</p>` : ''}
-                                <div style="display: flex; gap: var(--spacing-md); font-size: 0.8rem; color: var(--gray); margin-bottom: 0.8rem; flex-wrap: wrap;">
-                                    ${task.deadline ? `<span style="display: flex; align-items: center; gap: 0.3rem;"><i class="fas fa-calendar"></i> ${formatDate(task.deadline)}</span>` : ''}
-                                    <span class="status-badge ${task.status}">${getStatusText(task.status)}</span>
+                    <div class="task-card ${task.status}" style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: ${isMobile ? '1rem' : 'var(--spacing-md)'}; width: 100%; max-width: 800px; transition: all 0.3s ease; border-left: 5px solid ${task.status === 'todo' ? 'var(--gray)' : task.status === 'inprogress' ? 'var(--warning)' : 'var(--success)'};">
+                        <div style="display: flex; ${isMobile ? 'flex-direction: column;' : 'justify-content: space-between; align-items: flex-start;'} flex-wrap: wrap; gap: 1.5rem;">
+                            <!-- KONTEN TUGAS -->
+                            <div style="flex: 1; width: 100%;">
+                                <h4 style="font-size: ${isMobile ? '1.1rem' : '1.2rem'}; margin: 0 0 0.8rem 0; color: var(--dark); line-height: 1.4; font-weight: 600;">${task.title}</h4>
+                                
+                                ${task.description ? `
+                                    <div style="margin: 0 0 1rem 0; color: var(--gray); line-height: 1.6; font-size: ${isMobile ? '0.95rem' : '1rem'}; background: rgba(0,0,0,0.02); padding: 0.8rem; border-radius: 8px; border-left: 3px solid var(--border);">
+                                        ${task.description}
+                                    </div>
+                                ` : ''}
+                                
+                                <!-- META INFO -->
+                                <div style="display: flex; ${isMobile ? 'flex-direction: column;' : 'align-items: center;'} gap: ${isMobile ? '0.8rem' : '1.2rem'}; margin-bottom: 1rem; flex-wrap: wrap; font-size: 0.95rem;">
+                                    ${task.deadline ? `
+                                        <div class="deadline-text ${deadlineClass}" style="display: flex; align-items: center; gap: 0.5rem; font-weight: ${isOverdue || isDueToday ? '600' : '500'}; padding: 0.6rem 0.8rem; background: ${deadlineBg}; border-radius: 8px; ${isMobile ? 'width: 100%;' : ''}">
+                                            <i class="fas fa-calendar${isOverdue ? '-times' : ''}" style="color: ${deadlineColor};"></i> 
+                                            <span style="color: ${deadlineColor};">${formatDate(task.deadline)}</span>
+                                            ${isOverdue ? ' (Terlambat)' : isDueToday ? ' (Hari ini)' : isDueSoon ? ' (Segera)' : ''}
+                                        </div>
+                                    ` : ''}
+                                    
+                                    <span class="status-badge ${task.status}" style="font-size: ${isMobile ? '0.85rem' : '0.9rem'}; padding: ${isMobile ? '0.4rem 0.9rem' : '0.5rem 1rem'}; ${isMobile ? 'width: fit-content; align-self: flex-start;' : ''}; background: ${task.status === 'todo' ? '#f3f4f6' : task.status === 'inprogress' ? '#fef3c7' : '#d1fae5'}; color: ${task.status === 'todo' ? '#6b7280' : task.status === 'inprogress' ? '#d97706' : '#059669'}; border-radius: 20px; font-weight: 600; text-align: center; min-width: 100px;">
+                                        ${getStatusText(task.status)}
+                                    </span>
                                 </div>
                                 
-                                <!-- Tombol Aksi Status -->
-                                <div class="task-status-buttons">
+                                <!-- TOMBOL AKSI STATUS -->
+                                <div style="display: flex; ${isMobile ? 'flex-direction: column;' : 'gap: 0.6rem;'} gap: ${isMobile ? '0.6rem' : '0.6rem'}; margin-top: ${isMobile ? '1rem' : '0.8rem'};">
                                     <button class="status-btn todo-btn ${task.status === 'todo' ? 'active' : ''}" 
                                             onclick="changeTaskStatus(${task.id}, 'todo')" 
                                             title="Tandai sebagai Belum Dikerjakan"
-                                            ${task.status === 'todo' ? 'disabled' : ''}>
-                                        <i class="fas fa-clock"></i> Belum
+                                            ${task.status === 'todo' ? 'disabled' : ''}
+                                            style="${isMobile ? 'width: 100%;' : ''} padding: ${isMobile ? '0.7rem' : '0.6rem 1rem'}; font-size: ${isMobile ? '0.9rem' : '0.85rem'}; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: ${task.status === 'todo' ? 'var(--gray)' : 'var(--card-bg)'}; color: ${task.status === 'todo' ? 'white' : 'var(--dark)'}; min-height: 42px;">
+                                        <i class="fas fa-clock"></i> ${isMobile ? 'Tandai: Belum' : 'Belum'}
                                     </button>
                                     <button class="status-btn inprogress-btn ${task.status === 'inprogress' ? 'active' : ''}" 
                                             onclick="changeTaskStatus(${task.id}, 'inprogress')" 
                                             title="Tandai sebagai Sedang Dikerjakan"
-                                            ${task.status === 'inprogress' ? 'disabled' : ''}>
-                                        <i class="fas fa-spinner"></i> Sedang
+                                            ${task.status === 'inprogress' ? 'disabled' : ''}
+                                            style="${isMobile ? 'width: 100%;' : ''} padding: ${isMobile ? '0.7rem' : '0.6rem 1rem'}; font-size: ${isMobile ? '0.9rem' : '0.85rem'}; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: ${task.status === 'inprogress' ? 'var(--warning)' : 'var(--card-bg)'}; color: ${task.status === 'inprogress' ? 'white' : 'var(--dark)'}; min-height: 42px;">
+                                        <i class="fas fa-spinner"></i> ${isMobile ? 'Tandai: Sedang' : 'Sedang'}
                                     </button>
                                     <button class="status-btn done-btn ${task.status === 'done' ? 'active' : ''}" 
                                             onclick="changeTaskStatus(${task.id}, 'done')" 
                                             title="Tandai sebagai Selesai"
-                                            ${task.status === 'done' ? 'disabled' : ''}>
-                                        <i class="fas fa-check"></i> Selesai
+                                            ${task.status === 'done' ? 'disabled' : ''}
+                                            style="${isMobile ? 'width: 100%;' : ''} padding: ${isMobile ? '0.7rem' : '0.6rem 1rem'}; font-size: ${isMobile ? '0.9rem' : '0.85rem'}; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: ${task.status === 'done' ? 'var(--success)' : 'var(--card-bg)'}; color: ${task.status === 'done' ? 'white' : 'var(--dark)'}; min-height: 42px;">
+                                        <i class="fas fa-check"></i> ${isMobile ? 'Tandai: Selesai' : 'Selesai'}
                                     </button>
                                 </div>
                             </div>
                             
-                            <!-- Tombol Aksi Edit dan Delete -->
-                            <div class="task-action-buttons">
-                                <button class="edit-btn" onclick="editTask(${task.id})" title="Edit Tugas">
+                            <!-- TOMBOL EDIT & DELETE -->
+                            <div style="display: flex; ${isMobile ? 'flex-direction: row; width: 100%;' : 'flex-direction: column;'} gap: ${isMobile ? '0.6rem' : '0.6rem'}; ${isMobile ? 'margin-top: 1rem;' : 'min-width: 90px;'}">
+                                <button class="edit-btn" onclick="editTask(${task.id})" title="Edit Tugas"
+                                        style="${isMobile ? 'flex: 1;' : ''} padding: ${isMobile ? '0.7rem' : '0.7rem 1.2rem'}; font-size: ${isMobile ? '0.9rem' : '0.9rem'}; background: var(--info); color: white; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; display: flex; align-items: center; ${isMobile ? 'justify-content: center;' : 'justify-content: center;'} gap: 0.5rem; min-height: ${isMobile ? '44px' : '42px'}; transition: all 0.2s ease;">
                                     <i class="fas fa-edit"></i> Edit
                                 </button>
-                                <button class="delete-btn" onclick="deleteTask(${task.id})" title="Hapus Tugas">
+                                <button class="delete-btn" onclick="deleteTask(${task.id})" title="Hapus Tugas"
+                                        style="${isMobile ? 'flex: 1;' : ''} padding: ${isMobile ? '0.7rem' : '0.7rem 1.2rem'}; font-size: ${isMobile ? '0.9rem' : '0.9rem'}; background: var(--danger); color: white; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; display: flex; align-items: center; ${isMobile ? 'justify-content: center;' : 'justify-content: center;'} gap: 0.5rem; min-height: ${isMobile ? '44px' : '42px'}; transition: all 0.2s ease;">
                                     <i class="fas fa-trash"></i> Hapus
                                 </button>
                             </div>
                         </div>
                     </div>
-                `}).join('') : 
-                '<div class="card" style="text-align: center; color: var(--gray); padding: var(--spacing-lg);"><p>Tidak ada tugas yang ditemukan</p></div>'
+                    `;
+                }).join('') : 
+                `
+                <!-- EMPTY STATE TERPUSAT -->
+                <div style="text-align: center; color: var(--gray); padding: var(--spacing-xl); font-size: 1.1rem; border: 2px dashed var(--border); background: rgba(0,0,0,0.02); border-radius: 16px; max-width: 600px; margin: var(--spacing-lg) auto; width: 100%;">
+                    <i class="fas fa-tasks" style="font-size: 3rem; margin-bottom: 1rem; color: var(--gray); opacity: 0.3;"></i>
+                    <p style="margin: 0; font-size: 1.1rem; font-weight: 500;">Tidak ada tugas yang ditemukan</p>
+                    <p style="margin: 0.5rem 0 0 0; font-size: 0.95rem; opacity: 0.7;">Coba ubah filter atau tambahkan tugas baru</p>
+                    <button class="btn" onclick="setTaskFilter('all')" style="margin-top: 1.5rem; padding: 0.8rem 1.5rem; font-size: 1rem; border-radius: 10px; background: linear-gradient(90deg, var(--primary), var(--primary-light)); color: white; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem;">
+                        <i class="fas fa-list"></i> Tampilkan Semua Tugas
+                    </button>
+                </div>
+                `
             }
+            </div>
         </div>
     `;
+    
+    // Initialize date inputs setelah render
+    initializeDateInputs();
 }
 
 function renderProjects(container) {
@@ -2102,45 +2647,80 @@ function renderProjects(container) {
         <div class="card">
             <h2><i class="fas fa-project-diagram"></i> Manajemen Proyek</h2>
             
-            <div style="background: var(--card-bg); padding: var(--spacing-lg); border-radius: 12px; margin-bottom: var(--spacing-md);">
-                <h3><i class="fas fa-plus"></i> Tambah Proyek Baru</h3>
+            <div class="task-form-container">
+                <h3 style="margin-bottom: 1.5rem; font-size: 1.3rem; color: var(--dark);">
+                    <i class="fas fa-plus"></i> Tambah Proyek Baru
+                </h3>
                 <div class="input-group">
                     <i class="fas fa-pencil-alt"></i>
                     <input type="text" id="projectTitle" class="input" placeholder="Judul Proyek">
                 </div>
                 <div class="input-group">
-                    <label style="display: block; margin-bottom: 0.3rem; color: var(--gray); font-size: 0.8rem; padding-left: 2.5rem;">Tanggal Deadline</label>
                     <i class="fas fa-calendar"></i>
                     <input type="date" id="projectDeadline" class="input" placeholder="Tanggal Deadline">
                 </div>
                 <div class="input-group">
                     <i class="fas fa-align-left"></i>
-                    <textarea id="projectDesc" class="input" placeholder="Deskripsi Proyek" style="min-height: 80px; resize: vertical;"></textarea>
+                    <textarea id="projectDesc" class="input" placeholder="Deskripsi Proyek" style="min-height: 120px; resize: vertical; font-size: 1rem; font-family: 'Poppins', sans-serif; padding-top: 1rem;"></textarea>
                 </div>
-                <button class="btn" onclick="addProject()">
+                <button class="btn" onclick="addProject()" style="font-size: 1.05rem; padding: 1rem; margin-top: 0.5rem; border-radius: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.8rem;">
                     <i class="fas fa-plus"></i> Tambah Proyek
                 </button>
             </div>
 
-            <h3>Daftar Proyek (${projects.length})</h3>
+            <h3 style="font-size: 1.4rem; margin-top: 2.5rem; margin-bottom: 1.5rem; color: var(--dark);">
+                Daftar Proyek (${projects.length})
+            </h3>
+            
             ${projects.length > 0 ? 
-                projects.map((project, index) => `
-                    <div class="card">
-                        <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 1rem;">
-                            <div style="flex: 1; min-width: 250px;">
-                                <h4 style="margin: 0 0 0.5rem 0; color: var(--dark);">${project.title}</h4>
-                                ${project.description ? `<p style="margin: 0 0 0.8rem 0; color: var(--gray); line-height: 1.4;">${project.description}</p>` : ''}
-                                ${project.deadline ? `<p style="margin: 0; font-size: 0.8rem; color: var(--gray); display: flex; align-items: center; gap: 0.3rem;"><i class="fas fa-calendar"></i> Deadline: ${formatDate(project.deadline)}</p>` : ''}
+                projects.map((project, index) => {
+                    const isOverdue = project.deadline && new Date(project.deadline) < new Date();
+                    const isDueToday = project.deadline && new Date(project.deadline).toDateString() === new Date().toDateString();
+                    const isDueSoon = project.deadline && !isOverdue && !isDueToday && 
+                                     new Date(project.deadline) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+                    
+                    return `
+                    <div class="project-card">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1.5rem;">
+                            <div style="flex: 1; min-width: 300px;">
+                                <h4>${project.title}</h4>
+                                
+                                ${project.description ? `
+                                    <p style="margin: 0 0 1rem 0; color: var(--gray); line-height: 1.6; font-size: 1rem; background: rgba(0,0,0,0.02); padding: 0.8rem; border-radius: 8px; border-left: 3px solid var(--border);">
+                                        ${project.description}
+                                    </p>
+                                ` : ''}
+                                
+                                ${project.deadline ? `
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; color: ${isOverdue ? 'var(--danger)' : isDueToday ? 'var(--warning)' : isDueSoon ? 'var(--info)' : 'var(--gray)'}; font-weight: ${isOverdue || isDueToday || isDueSoon ? '600' : '500'}; margin-top: 0.8rem; padding: 0.6rem 1rem; background: ${isOverdue ? 'rgba(239, 68, 68, 0.1)' : isDueToday ? 'rgba(245, 158, 11, 0.1)' : isDueSoon ? 'rgba(6, 182, 212, 0.1)' : 'rgba(0,0,0,0.03)'}; border-radius: 8px;">
+                                        <i class="fas fa-calendar${isOverdue ? '-times' : ''}"></i> 
+                                        <span>
+                                            <strong>Deadline:</strong> ${formatDate(project.deadline)}
+                                            ${isOverdue ? ' (Terlambat)' : isDueToday ? ' (Hari ini)' : isDueSoon ? ' (Segera)' : ''}
+                                        </span>
+                                    </div>
+                                ` : `
+                                    <div style="font-size: 0.95rem; color: var(--gray); margin-top: 0.8rem; padding: 0.6rem 1rem; background: rgba(0,0,0,0.03); border-radius: 8px;">
+                                        <i class="fas fa-calendar"></i> 
+                                        <span>Tidak ada deadline</span>
+                                    </div>
+                                `}
                             </div>
                             <div class="task-action-buttons">
-                                <button class="delete-btn" onclick="deleteProject(${index})" title="Hapus proyek">
+                                <button class="delete-btn" onclick="deleteProject(${index})" title="Hapus proyek" style="background: var(--danger); color: white; padding: 0.7rem 1.2rem; border-radius: 10px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s ease; display: flex; align-items: center; gap: 0.6rem; min-width: 90px; justify-content: center;">
                                     <i class="fas fa-trash"></i> Hapus
                                 </button>
                             </div>
                         </div>
                     </div>
-                `).join('') : 
-                '<div class="card" style="text-align: center; color: var(--gray); padding: var(--spacing-lg);"><p>Belum ada proyek</p></div>'
+                `}).join('') : 
+                `
+                <div class="card" style="text-align: center; color: var(--gray); padding: var(--spacing-xl); font-size: 1.1rem; border: 2px dashed var(--border); background: rgba(0,0,0,0.02);">
+                    <i class="fas fa-project-diagram" style="font-size: 3rem; margin-bottom: 1rem; color: var(--gray); opacity: 0.3;"></i>
+                    <p style="margin: 0; font-size: 1.1rem;">Belum ada proyek</p>
+                    <p style="margin: 0.5rem 0 0 0; font-size: 0.95rem; opacity: 0.7;">Tambahkan proyek baru untuk memulai</p>
+                </div>
+                `
             }
         </div>
     `;
@@ -2154,16 +2734,16 @@ function renderKanban(container) {
     container.innerHTML = `
         <div class="card">
             <h2><i class="fas fa-columns"></i> Kanban Board</h2>
-            <p class="mb-3">Drag and drop tugas untuk mengubah status</p>
+            <p class="mb-3" style="font-size: 1.1rem;">Drag and drop tugas untuk mengubah status</p>
             
             <div class="kanban-board">
                 <div class="kanban-column todo" ondrop="drop(event)" ondragover="allowDrop(event)">
                     <h3>Belum Dikerjakan <span class="status-badge todo">${todoTasks.length}</span></h3>
                     ${todoTasks.map((task, index) => `
                         <div class="task-card" draggable="true" ondragstart="drag(event)" id="task-${task.id}">
-                            <h4>${task.title}</h4>
-                            ${task.description ? `<p>${task.description}</p>` : ''}
-                            ${task.deadline ? `<small><i class="fas fa-calendar"></i> ${formatDate(task.deadline)}</small>` : ''}
+                            <h4 style="font-size: 1.1rem;">${task.title}</h4>
+                            ${task.description ? `<p style="font-size: 1rem;">${task.description}</p>` : ''}
+                            ${task.deadline ? `<small style="font-size: 0.95rem;"><i class="fas fa-calendar"></i> ${formatDate(task.deadline)}</small>` : ''}
                         </div>
                     `).join('')}
                 </div>
@@ -2172,9 +2752,9 @@ function renderKanban(container) {
                     <h3>Sedang Dikerjakan <span class="status-badge inprogress">${inProgressTasks.length}</span></h3>
                     ${inProgressTasks.map((task, index) => `
                         <div class="task-card" draggable="true" ondragstart="drag(event)" id="task-${task.id}">
-                            <h4>${task.title}</h4>
-                            ${task.description ? `<p>${task.description}</p>` : ''}
-                            ${task.deadline ? `<small><i class="fas fa-calendar"></i> ${formatDate(task.deadline)}</small>` : ''}
+                            <h4 style="font-size: 1.1rem;">${task.title}</h4>
+                            ${task.description ? `<p style="font-size: 1rem;">${task.description}</p>` : ''}
+                            ${task.deadline ? `<small style="font-size: 0.95rem;"><i class="fas fa-calendar"></i> ${formatDate(task.deadline)}</small>` : ''}
                         </div>
                     `).join('')}
                 </div>
@@ -2183,9 +2763,9 @@ function renderKanban(container) {
                     <h3>Selesai <span class="status-badge done">${doneTasks.length}</span></h3>
                     ${doneTasks.map((task, index) => `
                         <div class="task-card" draggable="true" ondragstart="drag(event)" id="task-${task.id}">
-                            <h4>${task.title}</h4>
-                            ${task.description ? `<p>${task.description}</p>` : ''}
-                            ${task.deadline ? `<small><i class="fas fa-calendar"></i> ${formatDate(task.deadline)}</small>` : ''}
+                            <h4 style="font-size: 1.1rem;">${task.title}</h4>
+                            ${task.description ? `<p style="font-size: 1rem;">${task.description}</p>` : ''}
+                            ${task.deadline ? `<small style="font-size: 0.95rem;"><i class="fas fa-calendar"></i> ${formatDate(task.deadline)}</small>` : ''}
                         </div>
                     `).join('')}
                 </div>
@@ -2199,7 +2779,7 @@ function renderApp() {
     document.body.scrollTop = 0;
     document.documentElement.scrollTop = 0;
 
-    // Update theme toggle dengan emoji yang sesuai (tanpa lonceng)
+    // Update theme toggle dengan emoji yang sesuai
     document.querySelector(".app-header nav").innerHTML = `
         <button class="theme-toggle" onclick="toggleTheme()">
             ${currentTheme === "light" ? '🌙' : '☀️'}
@@ -2213,23 +2793,27 @@ function renderApp() {
         <div class="app-grid ${sidebarCollapsed ? 'sidebar-collapsed' : ''}">
             <aside class="sidebar">
                 <div class="profile">
-                    <div class="avatar">${currentUser.name[0].toUpperCase()}</div>
+                    <div class="avatar">
+                        ${currentUser.profileImage 
+                            ? `<img src="${currentUser.profileImage}" alt="${currentUser.name}">` 
+                            : currentUser.name[0].toUpperCase()}
+                    </div>
                     <div>
-                        <strong>${currentUser.name}</strong><br>
-                        <small>@${currentUser.username}</small>
+                        <strong style="font-size: 1.2rem;">${currentUser.name}</strong><br>
+                        <small style="font-size: 0.9rem;">@${currentUser.username}</small>
                     </div>
                 </div>
                 <div class="quick">
-                    <button class="btn-secondary" onclick="showView('dashboard'); closeMobileSidebar();">
+                    <button class="btn-secondary ${currentView === 'dashboard' ? 'active' : ''}" onclick="showView('dashboard'); closeMobileSidebar();">
                         <i class="fas fa-tachometer-alt"></i> Dashboard
                     </button>
-                    <button class="btn-secondary" onclick="showView('tasks'); closeMobileSidebar();">
+                    <button class="btn-secondary ${currentView === 'tasks' ? 'active' : ''}" onclick="showView('tasks'); closeMobileSidebar();">
                         <i class="fas fa-tasks"></i> Tugas
                     </button>
-                    <button class="btn-secondary" onclick="showView('projects'); closeMobileSidebar();">
+                    <button class="btn-secondary ${currentView === 'projects' ? 'active' : ''}" onclick="showView('projects'); closeMobileSidebar();">
                         <i class="fas fa-project-diagram"></i> Proyek
                     </button>
-                    <button class="btn-secondary" onclick="showView('kanban'); closeMobileSidebar();">
+                    <button class="btn-secondary ${currentView === 'kanban' ? 'active' : ''}" onclick="showView('kanban'); closeMobileSidebar();">
                         <i class="fas fa-columns"></i> Kanban
                     </button>
                     <button class="btn-secondary" onclick="openReportModal(); closeMobileSidebar();">
@@ -2266,7 +2850,7 @@ function renderApp() {
 
     renderUserProfile();
     ActivityManager.renderActivities();
-    showView("dashboard");
+    showView(currentView || "dashboard");
 }
 
 // ============ Utility Functions ============
@@ -2513,7 +3097,9 @@ function initDemoData() {
                 },
                 lastUpdated: new Date().toISOString()
             },
-            created_at: new Date(2025, 11, 1).toISOString()
+            created_at: new Date(2025, 11, 1).toISOString(),
+            lastLogin: new Date().toISOString(),
+            lastDevice: CloudSyncManager.getDeviceId()
         };
 
         users.push(demoData);
@@ -2543,7 +3129,9 @@ function initDemoData() {
             projects: [],
             activities: [],
             productivityStats: FlowSyncAPI.initializeProductivityStats(),
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+            lastDevice: CloudSyncManager.getDeviceId()
         };
         
         users.push(testData);
@@ -2604,6 +3192,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Initialize date inputs
     initializeDateInputs();
+    
+    // Initialize image upload
+    const imageInput = document.getElementById('profileImageInput');
+    if (imageInput) {
+        imageInput.addEventListener('change', handleImageUpload);
+    }
 
     // Event listeners untuk Enter key
     document.addEventListener("keypress", (e) => {
@@ -2629,9 +3223,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Tutup sidebar mobile ketika window di-resize ke desktop
     window.addEventListener('resize', () => {
-        if (window.innerWidth > 768) {
+        if (window.innerWidth > 992) {
             closeMobileSidebar();
         }
+        // Update user profile untuk responsif
+        setTimeout(renderUserProfile, 100);
     });
 
     // Close user menu when clicking outside
@@ -2654,6 +3250,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // Inisialisasi cloud sync
+    CloudSyncManager.initialize();
+    
     initDemoData();
     
     // Check for reset token in URL
@@ -2662,5 +3261,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (currentUser) {
         renderApp();
         ActivityManager.addActivity('login', `Session dilanjutkan`);
+        
+        // Tampilkan sync status
+        CloudSyncManager.updateSyncStatus(CloudSyncManager.isOnline());
     }
 });
