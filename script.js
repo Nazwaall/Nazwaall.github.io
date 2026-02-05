@@ -2726,52 +2726,358 @@ function renderProjects(container) {
     `;
 }
 
+// ============ Kanban Board Functions ============
+let dragTaskId = null;
+
 function renderKanban(container) {
     const todoTasks = currentUser.tasks?.filter(t => t.status === 'todo') || [];
     const inProgressTasks = currentUser.tasks?.filter(t => t.status === 'inprogress') || [];
     const doneTasks = currentUser.tasks?.filter(t => t.status === 'done') || [];
 
+    const isMobile = window.innerWidth <= 768;
+    
     container.innerHTML = `
-        <div class="card">
-            <h2><i class="fas fa-columns"></i> Kanban Board</h2>
-            <p class="mb-3" style="font-size: 1.1rem;">Drag and drop tugas untuk mengubah status</p>
+        <div class="card" style="max-width: 1400px; margin: 0 auto; width: 100%;">
+            <!-- HEADER KANBAN TERPUSAT -->
+            <div style="text-align: center; margin-bottom: var(--spacing-lg); padding-bottom: var(--spacing-md); border-bottom: 2px solid var(--border);">
+                <h2 style="font-size: ${isMobile ? '1.5rem' : '1.8rem'}; color: var(--dark); margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.8rem;">
+                    <i class="fas fa-columns"></i> Kanban Board
+                </h2>
+                <p style="color: var(--gray); font-size: ${isMobile ? '1rem' : '1.1rem'}; max-width: 600px; margin: 0 auto; line-height: 1.6;">
+                    Seret dan lepas tugas untuk mengubah statusnya secara visual
+                </p>
+            </div>
+
+            <!-- INFO DRAG & DROP -->
+            <div class="card" style="background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%); border: 1px solid rgba(79, 70, 229, 0.15); margin-bottom: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div class="notification-icon" style="background: rgba(79, 70, 229, 0.1);">
+                        <i class="fas fa-hand-pointer" style="color: var(--primary); font-size: 1.3rem;"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 0.3rem 0; color: var(--primary); font-size: 1.1rem;">Drag & Drop</h4>
+                        <p style="margin: 0; font-size: 1rem; color: var(--gray);">
+                            Seret kartu tugas ke kolom lain untuk mengubah status. Perubahan hanya berlaku di Kanban Board.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KANBAN BOARD -->
+            <div class="kanban-board" id="kanbanBoard">
+                <!-- Belum Dikerjakan -->
+                <div class="kanban-column todo" 
+                     data-status="todo"
+                     ondrop="handleDrop(event)"
+                     ondragover="handleDragOver(event)">
+                    <h3>
+                        <i class="fas fa-clock"></i> Belum Dikerjakan
+                        <span class="status-badge todo">${todoTasks.length}</span>
+                    </h3>
+                    <div id="todoColumn" class="kanban-column-content">
+                        ${todoTasks.length > 0 ? 
+                            todoTasks.map(task => renderKanbanCard(task)).join('') : 
+                            renderEmptyColumn('Belum ada tugas', 'todo')
+                        }
+                    </div>
+                </div>
+
+                <!-- Sedang Dikerjakan -->
+                <div class="kanban-column inprogress" 
+                     data-status="inprogress"
+                     ondrop="handleDrop(event)"
+                     ondragover="handleDragOver(event)">
+                    <h3>
+                        <i class="fas fa-spinner"></i> Sedang Dikerjakan
+                        <span class="status-badge inprogress">${inProgressTasks.length}</span>
+                    </h3>
+                    <div id="inprogressColumn" class="kanban-column-content">
+                        ${inProgressTasks.length > 0 ? 
+                            inProgressTasks.map(task => renderKanbanCard(task)).join('') : 
+                            renderEmptyColumn('Tidak ada yang sedang dikerjakan', 'inprogress')
+                        }
+                    </div>
+                </div>
+
+                <!-- Selesai -->
+                <div class="kanban-column done" 
+                     data-status="done"
+                     ondrop="handleDrop(event)"
+                     ondragover="handleDragOver(event)">
+                    <h3>
+                        <i class="fas fa-check-circle"></i> Selesai
+                        <span class="status-badge done">${doneTasks.length}</span>
+                    </h3>
+                    <div id="doneColumn" class="kanban-column-content">
+                        ${doneTasks.length > 0 ? 
+                            doneTasks.map(task => renderKanbanCard(task)).join('') : 
+                            renderEmptyColumn('Belum ada tugas selesai', 'done')
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOMBOL KEMBALI -->
+            <div style="text-align: center; margin-top: var(--spacing-lg);">
+                <button class="btn-secondary" onclick="showView('tasks')" style="padding: ${isMobile ? '0.8rem 1.5rem' : '1rem 2rem'}; font-size: ${isMobile ? '1rem' : '1.1rem'}; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.8rem;">
+                    <i class="fas fa-arrow-left"></i> Kembali ke Daftar Tugas
+                </button>
+            </div>
+        </div>
+    `;
+
+    // Inisialisasi drag & drop setelah render
+    setTimeout(() => {
+        initializeKanbanDragDrop();
+    }, 100);
+}
+
+function renderKanbanCard(task) {
+    const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== 'done';
+    const isDueToday = task.deadline && new Date(task.deadline).toDateString() === new Date().toDateString();
+    const isDueSoon = task.deadline && !isOverdue && !isDueToday && 
+                     new Date(task.deadline) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    
+    let deadlineClass = '';
+    if (isOverdue) deadlineClass = 'overdue';
+    else if (isDueToday) deadlineClass = 'today';
+    else if (isDueSoon) deadlineClass = 'soon';
+
+    return `
+        <div class="task-card ${task.status} kanban-task" 
+             draggable="true"
+             data-task-id="${task.id}"
+             data-status="${task.status}"
+             ondragstart="handleDragStart(event)">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; margin-bottom: 0.8rem;">
+                <h4 style="margin: 0; color: var(--dark); font-size: 1.1rem; line-height: 1.4; flex: 1;">
+                    ${task.title}
+                </h4>
+                <button class="edit-btn" onclick="editTask(${task.id})" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </div>
             
-            <div class="kanban-board">
-                <div class="kanban-column todo" ondrop="drop(event)" ondragover="allowDrop(event)">
-                    <h3>Belum Dikerjakan <span class="status-badge todo">${todoTasks.length}</span></h3>
-                    ${todoTasks.map((task, index) => `
-                        <div class="task-card" draggable="true" ondragstart="drag(event)" id="task-${task.id}">
-                            <h4 style="font-size: 1.1rem;">${task.title}</h4>
-                            ${task.description ? `<p style="font-size: 1rem;">${task.description}</p>` : ''}
-                            ${task.deadline ? `<small style="font-size: 0.95rem;"><i class="fas fa-calendar"></i> ${formatDate(task.deadline)}</small>` : ''}
-                        </div>
-                    `).join('')}
-                </div>
+            ${task.description ? `
+                <p style="margin: 0 0 0.8rem 0; color: var(--gray); line-height: 1.5; font-size: 0.95rem; padding: 0.6rem; background: rgba(0,0,0,0.03); border-radius: 8px;">
+                    ${task.description}
+                </p>
+            ` : ''}
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                ${task.deadline ? `
+                    <span class="deadline-text ${deadlineClass}" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+                        <i class="fas fa-calendar${isOverdue ? '-times' : ''}"></i> 
+                        ${formatDate(task.deadline)}
+                    </span>
+                ` : '<span style="font-size: 0.85rem; color: var(--gray);">Tidak ada deadline</span>'}
                 
-                <div class="kanban-column inprogress" ondrop="drop(event)" ondragover="allowDrop(event)">
-                    <h3>Sedang Dikerjakan <span class="status-badge inprogress">${inProgressTasks.length}</span></h3>
-                    ${inProgressTasks.map((task, index) => `
-                        <div class="task-card" draggable="true" ondragstart="drag(event)" id="task-${task.id}">
-                            <h4 style="font-size: 1.1rem;">${task.title}</h4>
-                            ${task.description ? `<p style="font-size: 1rem;">${task.description}</p>` : ''}
-                            ${task.deadline ? `<small style="font-size: 0.95rem;"><i class="fas fa-calendar"></i> ${formatDate(task.deadline)}</small>` : ''}
-                        </div>
-                    `).join('')}
+                <div class="task-action-buttons" style="display: flex; gap: 0.4rem;">
+                    <button class="delete-btn" onclick="deleteTask(${task.id})" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
-                
-                <div class="kanban-column done" ondrop="drop(event)" ondragover="allowDrop(event)">
-                    <h3>Selesai <span class="status-badge done">${doneTasks.length}</span></h3>
-                    ${doneTasks.map((task, index) => `
-                        <div class="task-card" draggable="true" ondragstart="drag(event)" id="task-${task.id}">
-                            <h4 style="font-size: 1.1rem;">${task.title}</h4>
-                            ${task.description ? `<p style="font-size: 1rem;">${task.description}</p>` : ''}
-                            ${task.deadline ? `<small style="font-size: 0.95rem;"><i class="fas fa-calendar"></i> ${formatDate(task.deadline)}</small>` : ''}
-                        </div>
-                    `).join('')}
+            </div>
+            
+            <!-- Drag Handle -->
+            <div style="display: flex; align-items: center; justify-content: center; margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px dashed var(--border);">
+                <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--gray); font-size: 0.8rem;">
+                    <i class="fas fa-grip-vertical"></i>
+                    <span>Seret untuk memindahkan</span>
                 </div>
             </div>
         </div>
     `;
+}
+
+function renderEmptyColumn(message, status) {
+    const statusIcons = {
+        'todo': 'fas fa-clock',
+        'inprogress': 'fas fa-spinner',
+        'done': 'fas fa-check-circle'
+    };
+    
+    return `
+        <div style="text-align: center; padding: var(--spacing-lg); color: var(--gray);">
+            <div style="font-size: 3rem; color: var(--border); margin-bottom: 1rem;">
+                <i class="${statusIcons[status]}"></i>
+            </div>
+            <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">${message}</p>
+            <p style="font-size: 0.95rem; opacity: 0.7;">Tambahkan tugas dari menu Tugas</p>
+        </div>
+    `;
+}
+
+// ============ Kanban Drag & Drop Functions ============
+function initializeKanbanDragDrop() {
+    const tasks = document.querySelectorAll('.kanban-task');
+    
+    tasks.forEach(task => {
+        task.addEventListener('dragstart', handleDragStart);
+        task.addEventListener('dragend', handleDragEnd);
+    });
+}
+
+function handleDragStart(event) {
+    dragTaskId = event.currentTarget.getAttribute('data-task-id');
+    event.currentTarget.classList.add('dragging');
+    
+    // Set drag image (opsional)
+    event.dataTransfer.setData('text/plain', dragTaskId);
+    event.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragEnd(event) {
+    event.currentTarget.classList.remove('dragging');
+    dragTaskId = null;
+}
+
+function handleDragOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    
+    // Highlight column saat drag over
+    const column = event.currentTarget.closest('.kanban-column');
+    if (column) {
+        column.style.boxShadow = 'inset 0 0 0 3px rgba(79, 70, 229, 0.3)';
+        column.style.transition = 'box-shadow 0.2s ease';
+    }
+}
+
+function handleDragLeave(event) {
+    // Reset highlight saat drag leave
+    const column = event.currentTarget.closest('.kanban-column');
+    if (column) {
+        column.style.boxShadow = '';
+    }
+}
+
+async function handleDrop(event) {
+    event.preventDefault();
+    
+    if (!dragTaskId) return;
+    
+    // Reset highlight
+    const column = event.currentTarget.closest('.kanban-column');
+    if (column) {
+        column.style.boxShadow = '';
+    }
+    
+    const newStatus = column.getAttribute('data-status');
+    
+    // Dapatkan task yang sedang di-drag
+    const taskElement = document.querySelector(`[data-task-id="${dragTaskId}"]`);
+    const oldStatus = taskElement.getAttribute('data-status');
+    
+    // Jangan lakukan apa-apa jika status sama
+    if (newStatus === oldStatus) return;
+    
+    try {
+        // Update status di Kanban Board (hanya UI)
+        updateTaskInKanban(dragTaskId, newStatus);
+        
+        // Tampilkan feedback visual
+        showToast(`Tugas dipindahkan ke ${getStatusText(newStatus)}`, 'success');
+        
+        // Update database (tetap sync dengan server)
+        await FlowSyncAPI.updateTask(parseInt(dragTaskId), {
+            status: newStatus
+        });
+        
+        // Update local data
+        const taskIndex = currentUser.tasks.findIndex(t => t.id === parseInt(dragTaskId));
+        if (taskIndex !== -1) {
+            const oldStatus = currentUser.tasks[taskIndex].status;
+            currentUser.tasks[taskIndex].status = newStatus;
+            
+            if (newStatus === 'done' && oldStatus !== 'done') {
+                currentUser.tasks[taskIndex].completed_at = new Date().toISOString();
+                ActivityManager.addActivity('task_completed', `Menyelesaikan tugas: ${currentUser.tasks[taskIndex].title}`);
+            }
+            
+            localStorage.setItem("currentUser", JSON.stringify(currentUser));
+            
+            // Update productivity stats
+            if (newStatus === 'done' && oldStatus !== 'done') {
+                FlowSyncAPI.updateProductivityStats(currentUser.id, 'completed');
+            }
+            
+            // Cek notifikasi
+            NotificationManager.checkAndShowProductivityNotifications();
+        }
+        
+    } catch (error) {
+        console.error('Error updating task status:', error);
+        showToast("Gagal mengubah status tugas", "error");
+        
+        // Kembalikan ke posisi semula jika gagal
+        updateTaskInKanban(dragTaskId, oldStatus);
+    }
+}
+
+function updateTaskInKanban(taskId, newStatus) {
+    // Dapatkan task element
+    const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+    if (!taskElement) return;
+    
+    // Update status di atribut
+    taskElement.setAttribute('data-status', newStatus);
+    
+    // Update kelas untuk styling
+    taskElement.classList.remove('todo', 'inprogress', 'done');
+    taskElement.classList.add(newStatus);
+    
+    // Pindahkan ke kolom yang sesuai
+    const targetColumn = document.querySelector(`#${newStatus}Column`);
+    if (targetColumn) {
+        targetColumn.appendChild(taskElement);
+    }
+    
+    // Update counter di header kolom
+    updateColumnCounters();
+}
+
+function updateColumnCounters() {
+    const columns = {
+        'todo': document.querySelector('.kanban-column.todo .status-badge'),
+        'inprogress': document.querySelector('.kanban-column.inprogress .status-badge'),
+        'done': document.querySelector('.kanban-column.done .status-badge')
+    };
+    
+    Object.keys(columns).forEach(status => {
+        const column = document.querySelector(`#${status}Column`);
+        if (column && columns[status]) {
+            const taskCount = column.querySelectorAll('.kanban-task').length;
+            columns[status].textContent = taskCount;
+        }
+    });
+}
+
+// ============ Helper Functions ============
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Hari ini';
+    if (diffDays === 1) return 'Besok';
+    if (diffDays === -1) return 'Kemarin';
+    
+    return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
+}
+
+function getStatusText(status) {
+    const statusMap = {
+        'todo': 'Belum Dikerjakan',
+        'inprogress': 'Sedang Dikerjakan',
+        'done': 'Selesai'
+    };
+    return statusMap[status] || status;
 }
 
 // ============ App Initialization ============
