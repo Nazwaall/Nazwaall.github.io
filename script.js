@@ -2730,9 +2730,31 @@ function renderProjects(container) {
 let dragTaskId = null;
 
 function renderKanban(container) {
-    const todoTasks = currentUser.tasks?.filter(t => t.status === 'todo') || [];
-    const inProgressTasks = currentUser.tasks?.filter(t => t.status === 'inprogress') || [];
-    const doneTasks = currentUser.tasks?.filter(t => t.status === 'done') || [];
+    // Pastikan kita memiliki data tasks terbaru
+    if (!currentUser || !currentUser.tasks) {
+        container.innerHTML = `
+            <div class="card" style="max-width: 1200px; margin: 0 auto; width: 100%;">
+                <div style="text-align: center; padding: var(--spacing-xl);">
+                    <div style="font-size: 4rem; color: var(--gray); margin-bottom: 1.5rem;">
+                        <i class="fas fa-columns"></i>
+                    </div>
+                    <h3 style="color: var(--dark); margin-bottom: 1rem;">Data Tidak Ditemukan</h3>
+                    <p style="color: var(--gray); font-size: 1.1rem; margin-bottom: 1.5rem;">
+                        Data tugas tidak tersedia. Silakan login kembali.
+                    </p>
+                    <button class="btn" onclick="logout()" style="padding: 0.8rem 1.5rem;">
+                        <i class="fas fa-sign-in-alt"></i> Login Ulang
+                    </button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    // Filter tasks berdasarkan status - PASTIKAN INI DARI currentUser.tasks TERBARU
+    const todoTasks = currentUser.tasks.filter(t => t.status === 'todo') || [];
+    const inProgressTasks = currentUser.tasks.filter(t => t.status === 'inprogress') || [];
+    const doneTasks = currentUser.tasks.filter(t => t.status === 'done') || [];
 
     const isMobile = window.innerWidth <= 768;
     
@@ -2746,6 +2768,22 @@ function renderKanban(container) {
                 <p style="color: var(--gray); font-size: ${isMobile ? '1rem' : '1.1rem'}; max-width: 600px; margin: 0 auto; line-height: 1.6;">
                     Seret dan lepas tugas untuk mengubah statusnya secara visual
                 </p>
+                
+                <!-- Info statistik -->
+                <div style="display: flex; justify-content: center; gap: 1.5rem; margin-top: 1.5rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--gray);"></div>
+                        <span style="font-size: 0.9rem; color: var(--gray);">Belum: ${todoTasks.length}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--warning);"></div>
+                        <span style="font-size: 0.9rem; color: var(--gray);">Sedang: ${inProgressTasks.length}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--success);"></div>
+                        <span style="font-size: 0.9rem; color: var(--gray);">Selesai: ${doneTasks.length}</span>
+                    </div>
+                </div>
             </div>
 
             <!-- INFO DRAG & DROP -->
@@ -2757,7 +2795,7 @@ function renderKanban(container) {
                     <div style="flex: 1;">
                         <h4 style="margin: 0 0 0.3rem 0; color: var(--primary); font-size: 1.1rem;">Drag & Drop</h4>
                         <p style="margin: 0; font-size: 1rem; color: var(--gray);">
-                            Seret kartu tugas ke kolom lain untuk mengubah status. Perubahan hanya berlaku di Kanban Board.
+                            Seret kartu tugas ke kolom lain untuk mengubah status. Perubahan akan disimpan otomatis.
                         </p>
                     </div>
                 </div>
@@ -2769,59 +2807,93 @@ function renderKanban(container) {
                 <div class="kanban-column todo" 
                      data-status="todo"
                      ondrop="handleDrop(event)"
-                     ondragover="handleDragOver(event)">
+                     ondragover="handleDragOver(event)"
+                     ondragleave="handleDragLeave(event)">
                     <h3>
                         <i class="fas fa-clock"></i> Belum Dikerjakan
-                        <span class="status-badge todo">${todoTasks.length}</span>
+                        <span class="status-badge todo" id="todoCounter">${todoTasks.length}</span>
                     </h3>
-                    <div id="todoColumn" class="kanban-column-content">
+                    <div id="todoColumn" class="kanban-column-content" style="min-height: 400px;">
                         ${todoTasks.length > 0 ? 
                             todoTasks.map(task => renderKanbanCard(task)).join('') : 
                             renderEmptyColumn('Belum ada tugas', 'todo')
                         }
                     </div>
+                    ${todoTasks.length === 0 ? '' : `
+                        <div style="text-align: center; margin-top: 1rem;">
+                            <small style="color: var(--gray); font-size: 0.8rem;">
+                                ${todoTasks.length} tugas menunggu
+                            </small>
+                        </div>
+                    `}
                 </div>
 
                 <!-- Sedang Dikerjakan -->
                 <div class="kanban-column inprogress" 
                      data-status="inprogress"
                      ondrop="handleDrop(event)"
-                     ondragover="handleDragOver(event)">
+                     ondragover="handleDragOver(event)"
+                     ondragleave="handleDragLeave(event)">
                     <h3>
                         <i class="fas fa-spinner"></i> Sedang Dikerjakan
-                        <span class="status-badge inprogress">${inProgressTasks.length}</span>
+                        <span class="status-badge inprogress" id="inprogressCounter">${inProgressTasks.length}</span>
                     </h3>
-                    <div id="inprogressColumn" class="kanban-column-content">
+                    <div id="inprogressColumn" class="kanban-column-content" style="min-height: 400px;">
                         ${inProgressTasks.length > 0 ? 
                             inProgressTasks.map(task => renderKanbanCard(task)).join('') : 
                             renderEmptyColumn('Tidak ada yang sedang dikerjakan', 'inprogress')
                         }
                     </div>
+                    ${inProgressTasks.length === 0 ? '' : `
+                        <div style="text-align: center; margin-top: 1rem;">
+                            <small style="color: var(--gray); font-size: 0.8rem;">
+                                ${inProgressTasks.length} tugas dalam progres
+                            </small>
+                        </div>
+                    `}
                 </div>
 
                 <!-- Selesai -->
                 <div class="kanban-column done" 
                      data-status="done"
                      ondrop="handleDrop(event)"
-                     ondragover="handleDragOver(event)">
+                     ondragover="handleDragOver(event)"
+                     ondragleave="handleDragLeave(event)">
                     <h3>
                         <i class="fas fa-check-circle"></i> Selesai
-                        <span class="status-badge done">${doneTasks.length}</span>
+                        <span class="status-badge done" id="doneCounter">${doneTasks.length}</span>
                     </h3>
-                    <div id="doneColumn" class="kanban-column-content">
+                    <div id="doneColumn" class="kanban-column-content" style="min-height: 400px;">
                         ${doneTasks.length > 0 ? 
                             doneTasks.map(task => renderKanbanCard(task)).join('') : 
                             renderEmptyColumn('Belum ada tugas selesai', 'done')
                         }
                     </div>
+                    ${doneTasks.length === 0 ? '' : `
+                        <div style="text-align: center; margin-top: 1rem;">
+                            <small style="color: var(--gray); font-size: 0.8rem;">
+                                ${doneTasks.length} tugas selesai
+                            </small>
+                        </div>
+                    `}
                 </div>
             </div>
 
-            <!-- TOMBOL KEMBALI -->
-            <div style="text-align: center; margin-top: var(--spacing-lg);">
-                <button class="btn-secondary" onclick="showView('tasks')" style="padding: ${isMobile ? '0.8rem 1.5rem' : '1rem 2rem'}; font-size: ${isMobile ? '1rem' : '1.1rem'}; border-radius: 12px; display: inline-flex; align-items: center; gap: 0.8rem;">
-                    <i class="fas fa-arrow-left"></i> Kembali ke Daftar Tugas
-                </button>
+            <!-- FOOTER KANBAN -->
+            <div style="margin-top: var(--spacing-lg); padding-top: var(--spacing-md); border-top: 1px solid var(--border);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div style="color: var(--gray); font-size: 0.9rem;">
+                        <i class="fas fa-info-circle"></i> Total: ${currentUser.tasks.length} tugas
+                    </div>
+                    <div style="display: flex; gap: 0.8rem;">
+                        <button class="btn-secondary" onclick="showView('tasks')" style="padding: 0.7rem 1.2rem; font-size: 0.9rem; border-radius: 8px; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-list"></i> Daftar Tugas
+                        </button>
+                        <button class="btn-secondary" onclick="refreshKanban()" style="padding: 0.7rem 1.2rem; font-size: 0.9rem; border-radius: 8px; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     `;
@@ -2829,7 +2901,204 @@ function renderKanban(container) {
     // Inisialisasi drag & drop setelah render
     setTimeout(() => {
         initializeKanbanDragDrop();
+        console.log('Kanban initialized with tasks:', currentUser.tasks);
     }, 100);
+}
+
+function renderKanbanCard(task) {
+    if (!task) return '';
+    
+    const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== 'done';
+    const isDueToday = task.deadline && new Date(task.deadline).toDateString() === new Date().toDateString();
+    const isDueSoon = task.deadline && !isOverdue && !isDueToday && 
+                     new Date(task.deadline) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    
+    let deadlineClass = '';
+    let deadlineIcon = 'fa-calendar';
+    if (isOverdue) {
+        deadlineClass = 'overdue';
+        deadlineIcon = 'fa-calendar-times';
+    } else if (isDueToday) {
+        deadlineClass = 'today';
+        deadlineIcon = 'fa-calendar-day';
+    } else if (isDueSoon) {
+        deadlineClass = 'soon';
+        deadlineIcon = 'fa-calendar-alt';
+    }
+
+    // Format tanggal deadline
+    let deadlineText = 'Tidak ada deadline';
+    if (task.deadline) {
+        deadlineText = formatDate(task.deadline);
+    }
+
+    // Format created at
+    const createdAt = task.created_at ? new Date(task.created_at).toLocaleDateString('id-ID') : '';
+
+    return `
+        <div class="task-card kanban-task ${task.status}" 
+             id="task-${task.id}"
+             draggable="true"
+             data-task-id="${task.id}"
+             data-status="${task.status}"
+             ondragstart="handleDragStart(event)"
+             ondragend="handleDragEnd(event)">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; margin-bottom: 0.8rem;">
+                <div style="flex: 1;">
+                    <h4 style="margin: 0; color: var(--dark); font-size: 1.1rem; line-height: 1.4; word-break: break-word;">
+                        ${task.title || 'Tugas tanpa judul'}
+                    </h4>
+                    ${createdAt ? `
+                        <small style="color: var(--gray); font-size: 0.75rem; margin-top: 0.2rem; display: block;">
+                            Dibuat: ${createdAt}
+                        </small>
+                    ` : ''}
+                </div>
+                <div style="display: flex; gap: 0.3rem;">
+                    <button class="edit-btn" onclick="editTask(${task.id})" style="padding: 0.4rem 0.6rem; font-size: 0.8rem; min-width: auto;" title="Edit tugas">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+            </div>
+            
+            ${task.description ? `
+                <div style="margin: 0 0 0.8rem 0; padding: 0.6rem; background: rgba(0,0,0,0.02); border-radius: 6px; border-left: 3px solid var(--primary-light);">
+                    <p style="margin: 0; color: var(--gray); line-height: 1.5; font-size: 0.9rem; word-break: break-word;">
+                        ${task.description}
+                    </p>
+                </div>
+            ` : ''}
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    ${task.deadline ? `
+                        <span class="deadline-text ${deadlineClass}" style="font-size: 0.8rem; padding: 0.3rem 0.6rem; display: flex; align-items: center; gap: 0.3rem;">
+                            <i class="fas ${deadlineIcon}"></i> 
+                            ${deadlineText}
+                        </span>
+                    ` : ''}
+                    
+                    <span class="status-badge ${task.status}" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">
+                        ${getStatusText(task.status)}
+                    </span>
+                </div>
+                
+                <div class="task-action-buttons" style="display: flex; gap: 0.3rem;">
+                    <button class="delete-btn" onclick="deleteTask(${task.id})" style="padding: 0.4rem 0.6rem; font-size: 0.8rem; min-width: auto;" title="Hapus tugas">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Drag Handle -->
+            <div style="display: flex; align-items: center; justify-content: center; margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px dashed var(--border);">
+                <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--gray); font-size: 0.75rem;">
+                    <i class="fas fa-grip-vertical"></i>
+                    <span>Seret untuk memindahkan</span>
+                </div>
+            </div>
+            
+            <!-- Debug info (hanya di development) -->
+            <!--
+            <div style="margin-top: 0.5rem; padding: 0.3rem; background: rgba(0,0,0,0.05); border-radius: 4px; font-size: 0.7rem; color: var(--gray);">
+                ID: ${task.id} | Status: ${task.status} | ${task.completed_at ? 'Selesai: ' + formatDate(task.completed_at) : ''}
+            </div>
+            -->
+        </div>
+    `;
+}
+
+function renderEmptyColumn(message, status) {
+    const statusIcons = {
+        'todo': { icon: 'fas fa-clock', color: 'var(--gray)' },
+        'inprogress': { icon: 'fas fa-spinner', color: 'var(--warning)' },
+        'done': { icon: 'fas fa-check-circle', color: 'var(--success)' }
+    };
+    
+    const statusConfig = statusIcons[status] || { icon: 'fas fa-columns', color: 'var(--gray)' };
+    
+    return `
+        <div style="text-align: center; padding: var(--spacing-xl) var(--spacing-md); color: var(--gray);">
+            <div style="font-size: 3.5rem; color: ${statusConfig.color}; opacity: 0.3; margin-bottom: 1rem;">
+                <i class="${statusConfig.icon}"></i>
+            </div>
+            <p style="font-size: 1.1rem; margin-bottom: 0.5rem; font-weight: 500;">${message}</p>
+            <p style="font-size: 0.9rem; opacity: 0.7; margin-bottom: 1.5rem;">
+                Tambahkan tugas dari menu "Tugas" atau seret tugas dari kolom lain
+            </p>
+            <button class="btn-secondary" onclick="showView('tasks')" style="padding: 0.6rem 1.2rem; font-size: 0.9rem; border-radius: 8px;">
+                <i class="fas fa-plus"></i> Tambah Tugas
+            </button>
+        </div>
+    `;
+}
+
+// ============ Kanban Utility Functions ============
+function refreshKanban() {
+    const container = document.getElementById('view');
+    if (container && currentView === 'kanban') {
+        // Load ulang data tasks dari API sebelum render
+        FlowSyncAPI.getTasks(currentUser.id)
+            .then(result => {
+                if (result.success) {
+                    currentUser.tasks = result.tasks;
+                    localStorage.setItem("currentUser", JSON.stringify(currentUser));
+                    renderKanban(container);
+                    showToast("Kanban Board direfresh", "success");
+                }
+            })
+            .catch(error => {
+                console.error('Error refreshing kanban:', error);
+                renderKanban(container); // Render dengan data yang ada
+            });
+    }
+}
+
+function initializeKanbanDragDrop() {
+    const tasks = document.querySelectorAll('.kanban-task');
+    
+    tasks.forEach(task => {
+        task.addEventListener('dragstart', handleDragStart);
+        task.addEventListener('dragend', handleDragEnd);
+        
+        // Tambahkan visual feedback saat hover
+        task.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+        });
+        
+        task.addEventListener('mouseleave', function() {
+            if (!this.classList.contains('dragging')) {
+                this.style.transform = '';
+            }
+        });
+    });
+    
+    // Update counters setelah inisialisasi
+    updateColumnCounters();
+}
+
+function updateColumnCounters() {
+    const todoColumn = document.querySelector('#todoColumn');
+    const inprogressColumn = document.querySelector('#inprogressColumn');
+    const doneColumn = document.querySelector('#doneColumn');
+    
+    if (todoColumn) {
+        const todoCount = todoColumn.querySelectorAll('.kanban-task').length;
+        const todoCounter = document.querySelector('#todoCounter');
+        if (todoCounter) todoCounter.textContent = todoCount;
+    }
+    
+    if (inprogressColumn) {
+        const inprogressCount = inprogressColumn.querySelectorAll('.kanban-task').length;
+        const inprogressCounter = document.querySelector('#inprogressCounter');
+        if (inprogressCounter) inprogressCounter.textContent = inprogressCount;
+    }
+    
+    if (doneColumn) {
+        const doneCount = doneColumn.querySelectorAll('.kanban-task').length;
+        const doneCounter = document.querySelector('#doneCounter');
+        if (doneCounter) doneCounter.textContent = doneCount;
+    }
 }
 
 function renderKanbanCard(task) {
@@ -2979,31 +3248,59 @@ async function handleDrop(event) {
         // Tampilkan feedback visual
         showToast(`Tugas dipindahkan ke ${getStatusText(newStatus)}`, 'success');
         
-        // Update database (tetap sync dengan server)
-        await FlowSyncAPI.updateTask(parseInt(dragTaskId), {
+        // Update database
+        const result = await FlowSyncAPI.updateTask(parseInt(dragTaskId), {
             status: newStatus
         });
         
-        // Update local data
-        const taskIndex = currentUser.tasks.findIndex(t => t.id === parseInt(dragTaskId));
-        if (taskIndex !== -1) {
-            const oldStatus = currentUser.tasks[taskIndex].status;
-            currentUser.tasks[taskIndex].status = newStatus;
-            
-            if (newStatus === 'done' && oldStatus !== 'done') {
-                currentUser.tasks[taskIndex].completed_at = new Date().toISOString();
-                ActivityManager.addActivity('task_completed', `Menyelesaikan tugas: ${currentUser.tasks[taskIndex].title}`);
+        if (result.success) {
+            // Update local data - PERBAIKAN DI SINI
+            const taskIndex = currentUser.tasks.findIndex(t => t.id === parseInt(dragTaskId));
+            if (taskIndex !== -1) {
+                // Simpan status lama untuk pengecekan
+                const wasDone = currentUser.tasks[taskIndex].status === 'done';
+                
+                // Update status
+                currentUser.tasks[taskIndex].status = newStatus;
+                
+                // Jika berpindah ke done, tambahkan completed_at
+                if (newStatus === 'done' && !wasDone) {
+                    currentUser.tasks[taskIndex].completed_at = new Date().toISOString();
+                    ActivityManager.addActivity('task_completed', `Menyelesaikan tugas: ${currentUser.tasks[taskIndex].title}`);
+                    
+                    // Update productivity stats
+                    FlowSyncAPI.updateProductivityStats(currentUser.id, 'completed');
+                }
+                
+                // PERBAIKAN: Simpan ke localStorage dan update users array
+                localStorage.setItem("currentUser", JSON.stringify(currentUser));
+                
+                // Update users array
+                const userIndex = users.findIndex(u => u.id === currentUser.id);
+                if (userIndex !== -1) {
+                    users[userIndex] = { ...currentUser };
+                    localStorage.setItem("flowsync_users", JSON.stringify(users));
+                }
+                
+                // Sync ke cloud jika online
+                if (CloudSyncManager.isOnline()) {
+                    setTimeout(() => CloudSyncManager.syncWithServer(), 1000);
+                }
+                
+                // Cek notifikasi
+                NotificationManager.checkAndShowProductivityNotifications();
+                
+            } else {
+                // Jika task tidak ditemukan di currentUser.tasks, refresh dari server
+                const tasksResult = await FlowSyncAPI.getTasks(currentUser.id);
+                if (tasksResult.success) {
+                    currentUser.tasks = tasksResult.tasks;
+                    localStorage.setItem("currentUser", JSON.stringify(currentUser));
+                    showToast("Data tugas diperbarui", "info");
+                }
             }
-            
-            localStorage.setItem("currentUser", JSON.stringify(currentUser));
-            
-            // Update productivity stats
-            if (newStatus === 'done' && oldStatus !== 'done') {
-                FlowSyncAPI.updateProductivityStats(currentUser.id, 'completed');
-            }
-            
-            // Cek notifikasi
-            NotificationManager.checkAndShowProductivityNotifications();
+        } else {
+            throw new Error(result.message);
         }
         
     } catch (error) {
@@ -3018,7 +3315,16 @@ async function handleDrop(event) {
 function updateTaskInKanban(taskId, newStatus) {
     // Dapatkan task element
     const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
-    if (!taskElement) return;
+    if (!taskElement) {
+        // Jika elemen tidak ditemukan, refresh kanban
+        setTimeout(() => {
+            const container = document.getElementById('view');
+            if (container && currentView === 'kanban') {
+                renderKanban(container);
+            }
+        }, 100);
+        return;
+    }
     
     // Update status di atribut
     taskElement.setAttribute('data-status', newStatus);
@@ -3027,14 +3333,40 @@ function updateTaskInKanban(taskId, newStatus) {
     taskElement.classList.remove('todo', 'inprogress', 'done');
     taskElement.classList.add(newStatus);
     
+    // Update border color berdasarkan status
+    const statusColors = {
+        'todo': 'var(--gray)',
+        'inprogress': 'var(--warning)',
+        'done': 'var(--success)'
+    };
+    taskElement.style.borderLeftColor = statusColors[newStatus] || 'var(--primary)';
+    
     // Pindahkan ke kolom yang sesuai
     const targetColumn = document.querySelector(`#${newStatus}Column`);
     if (targetColumn) {
-        targetColumn.appendChild(taskElement);
+        // Clone dan replace untuk trigger animation
+        const clonedTask = taskElement.cloneNode(true);
+        taskElement.parentNode.replaceChild(clonedTask, taskElement);
+        targetColumn.appendChild(clonedTask);
+        
+        // Re-initialize event listeners pada task yang baru
+        clonedTask.setAttribute('draggable', 'true');
+        clonedTask.setAttribute('ondragstart', 'handleDragStart(event)');
+        clonedTask.addEventListener('dragstart', handleDragStart);
+        clonedTask.addEventListener('dragend', handleDragEnd);
     }
     
     // Update counter di header kolom
     updateColumnCounters();
+    
+    // Tambah efek visual untuk perubahan
+    const newTaskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+    if (newTaskElement) {
+        newTaskElement.style.animation = 'fadeInMove 0.3s ease-out';
+        setTimeout(() => {
+            newTaskElement.style.animation = '';
+        }, 300);
+    }
 }
 
 function updateColumnCounters() {
